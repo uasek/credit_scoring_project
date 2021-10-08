@@ -109,6 +109,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+/Scripts/*
+
 
 # Spyder project settings
 .spyderproject
@@ -127,3 +129,19 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+# File extensions
+*.pdf
+*.ppt
+*.pptx
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.xlsb
+*.csv
+*.parquet
+*.orc
+*.pickle
+*.pkl
