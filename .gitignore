@@ -145,3 +145,7 @@ dmypy.json
 *.orc
 *.pickle
 *.pkl
+*.zip
+*.zipx
+*.data
+*.rar
