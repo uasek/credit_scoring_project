@@ -110,10 +110,11 @@ ENV/
 env.bak/
 venv.bak/
 /Scripts/*
-
+/etc/*
+/share/*
 
 # Spyder project settings
-.spyderproject
+/xgboost/*
 .spyproject
 
 # Rope project settings
@@ -145,3 +146,12 @@ dmypy.json
 *.orc
 *.pickle
 *.pkl
+*.zip
+*.zipx
+*.data
+*.rar
+*.data
+*.tsv
+*.gz
+
+
