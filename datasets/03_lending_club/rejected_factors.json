@@ -1,0 +1,1 @@
+{"cat_vals": ["Loan Title", "Zip Code", "State"], "num_vals": ["Amount Requested", "Risk_Score", "Debt-To-Income Ratio", "Employment Length"], "dates": ["Application Date"], "binary_vals": ["Policy Code"]}
