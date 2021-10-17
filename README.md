@@ -69,10 +69,21 @@ cd C:\Users\antonmarkov\01-studies\01-phd\year-3\model-risks\credit_scoring_proj
 
 __Шаг 2.__ Установить `venv` в сооответствии с версиями библиотек в requirements.txt:
 
+Windows-версия:
+
 ```
 python3 -m venv venv
+./venv/Scripts/activate.bat
+pip install -r requirements.txt
 ```
 
+UNIX-версия:
+
+```
+python3 -m venv venv
+source ./venv/bin/activate
+pip install -r requirements.txt
+```
 
 
 ## 3. Как запустить `venv`?
