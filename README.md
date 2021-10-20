@@ -19,7 +19,7 @@ _Financial Risk Management Lab, Higher School of Economics, Moscow, 2021-2022_
 ## Modules Included
 
 Overall pipeline is initially constructing using `sklearn.pipeline.Pipeline()` 
-(docs)[https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html].
+[docs](https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html).
 
 1. Preprocessing — many approaches already implemented in `feature-engine` library:
 	+ missing values imputation
@@ -27,8 +27,8 @@ Overall pipeline is initially constructing using `sklearn.pipeline.Pipeline()`
 	+ variable transformation
 	+ outlier detection and correction
 2. Feature Engineering:
-	+ featuretools (docs)[https://featuretools.alteryx.com/en/stable/]
-	+ Feature-engine — already supports sklearn-like `.fit()`/`.transform()` architecture (docs)[https://feature-engine.readthedocs.io/en/1.1.x/]
+	+ featuretools [docs](https://featuretools.alteryx.com/en/stable/)
+	+ Feature-engine — already supports sklearn-like `.fit()`/`.transform()` architecture [docs](https://feature-engine.readthedocs.io/en/1.1.x/)
 3. Feature Selection
 4. Additional Modules:
 	+ Target imbalance correction
@@ -49,3 +49,101 @@ Overall pipeline is initially constructing using `sklearn.pipeline.Pipeline()`
 
 
 
+* * *
+
+# FAQ, Instructions & Useful Links
+
+## 1. Как сделать клон GitHub- репозитория?
+
+Вроде всем настроил, пишите лично. — _Антон_
+
+
+
+## 2. Как поставить `venv`?
+
+__Шаг 1.__ Открыть папку с клоном git-репозитория в терминале:
+
+```
+cd C:\Users\antonmarkov\01-studies\01-phd\year-3\model-risks\credit_scoring_project
+```
+
+__Шаг 2.__ Установить `venv` в сооответствии с версиями библиотек в requirements.txt:
+
+Windows-версия:
+
+```
+python3 -m venv venv
+./venv/Scripts/activate.bat
+pip install -r requirements.txt
+```
+
+UNIX-версия:
+
+```
+python3 -m venv venv
+source ./venv/bin/activate
+pip install -r requirements.txt
+```
+
+
+## 3. Как запустить `venv`?
+
+__Шаг 1.__ Открыть папку с клоном git-репозитория в терминале:
+
+```
+cd C:\Users\antonmarkov\01-studies\01-phd\year-3\model-risks\credit_scoring_project
+```
+
+__Шаг 2 — Windows.__ Запустить `venv`:
+
+```
+./venv/Scripts/activate.bat
+```
+
+__Шаг 2 — Linux / Mac.__ Запустить `venv`:
+
+```
+source ./venv/bin/activate
+```
+
+
+
+## 4. Как сделать git-add-commit-push?
+
+__Шаг 1.__ Открыть папку с клоном git-репозитория в терминале:
+
+```
+cd C:\Users\antonmarkov\01-studies\01-phd\year-3\model-risks\credit_scoring_project
+```
+
+__Шаг 2.__ На всякий случай скчать все новые обновления с гитхаба (pull):
+
+```
+git pull
+```
+
+__Шаг 3.__ Добавить новые файлы, папки и т.п. Данные на гитхаб не загружаем!
+
+```
+git add new_file.ipynb
+```
+
+__Шаг 4.__ По всем добавленным файлам сохраняем текущую версию локально в version control (делаем commit). Не забываем указать осмысленное сообщение!
+
+```
+git commit -m "I did this and that"
+```
+
+__Шаг 5.__ Отправляем коммит на гитхаб
+
+```
+git push
+```
+
+
+
+## 5. Как работает Git?
+
+1. Ссылка на ютуб-курс от Миши [здесь](https://www.youtube.com/watch?v=SEvR78OhGtw&t=4203s)
+
+2. Хорошая книжка с документацией [здесь](https://git-scm.com/book/en/v2)
