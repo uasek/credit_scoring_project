@@ -5,6 +5,23 @@ import pandas as pd
 class ExampleModule:
     """
     Ограничение по квантилям + логарифм / степень
+
+
+    пример кода:
+    from sklearn.pipeline import Pipeline
+
+    caler = ExampleModule(q_lower=0.1, q_upper=0.9)
+    model = LinearRegression()
+
+    pipeline = Pipeline(
+        steps=[
+            ('preprocessor', scaler),
+            ('model', model)
+        ]
+    )
+    
+    pipeline.fit(x, y)
+    pipeline.predict(x)
     """
 
     def __init__(
@@ -21,7 +38,7 @@ class ExampleModule:
         self.q_lower = q_lower
         self.q_upper = q_upper
         self.log = log
-        self.power = 1
+        self.power = power
 
     def fit(self, x, y=None):
         """
