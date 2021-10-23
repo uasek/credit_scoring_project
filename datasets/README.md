@@ -67,6 +67,8 @@
 
 ### Общее впечатление
 
+Датасет не из простых, чтобы его применить, лучше внимательно прочитать всю информацию ниже.
+
 На данных можно построить аппликативную модель. Данные разделяются на одобренные и отклоненные заявки. По одобренным займам значительно большее число факторов, но наблюдений меньше. 
 
 __Одобренные заявки__ разделяются на 2 подмодуля: займы на 3 и на 5 лет. Некоторые авторы рекомендуют фильтровать выдачи с 2010-ого года (до этого заполняемость хуже), но мы пока этого не делаем.
@@ -84,6 +86,15 @@ __Отклоненные заявки__ могут иметь структурн
 * большое число факторов сомнительные и могут содержать информацию из будущего. Однозначно некорректные факторы уже отфильтровал, оставшиеся разделил на хорошие 'good' и потенциально некорректные 'risky'
 * достаточно большое число пропусков, но они, кажется, часто имеют экономическое объяснение (например, при отсутствии импотеки должна отсутствовать дата получения ипотеки)
 * идентификаторы клиентов не заполнены
+
+
+## 4. Japanese dataset
+
+According to the dataset description [here](https://archive.ics.uci.edu/ml/datasets/Japanese+Credit+Screening), the observations in the dataset _'represent positive and negative instances of people who were and were not granted credit.'_ 
+
+Such a dataset would be useful for experiments on reject inference if only there was a target of actual defaults.
+
+Since there is no information on defaults, I would suggest that we skipped the dataset in our experiment.
 
 
 ## 5. default of credit card clients Data Set
