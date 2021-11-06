@@ -63,7 +63,7 @@ Overall pipeline is initially constructing using `sklearn.pipeline.Pipeline()`
 
 __Шаг 1.__ Открыть папку с клоном git-репозитория в терминале:
 
-```
+```console
 cd C:\Users\antonmarkov\01-studies\01-phd\year-3\model-risks\credit_scoring_project
 ```
 
@@ -71,7 +71,7 @@ __Шаг 2.__ Установить `venv` в сооответствии с ве�
 
 Windows-версия:
 
-```
+```console
 python3 -m venv venv
 ./venv/Scripts/activate.bat
 pip install -r requirements.txt
@@ -79,7 +79,7 @@ pip install -r requirements.txt
 
 UNIX-версия:
 
-```
+```console
 python3 -m venv venv
 source ./venv/bin/activate
 pip install -r requirements.txt
@@ -90,19 +90,19 @@ pip install -r requirements.txt
 
 __Шаг 1.__ Открыть папку с клоном git-репозитория в терминале:
 
-```
+```console
 cd C:\Users\antonmarkov\01-studies\01-phd\year-3\model-risks\credit_scoring_project
 ```
 
 __Шаг 2 — Windows.__ Запустить `venv`:
 
-```
+```console
 ./venv/Scripts/activate.bat
 ```
 
 __Шаг 2 — Linux / Mac.__ Запустить `venv`:
 
-```
+```console
 source ./venv/bin/activate
 ```
 
@@ -112,31 +112,31 @@ source ./venv/bin/activate
 
 __Шаг 1.__ Открыть папку с клоном git-репозитория в терминале:
 
-```
+```console
 cd C:\Users\antonmarkov\01-studies\01-phd\year-3\model-risks\credit_scoring_project
 ```
 
 __Шаг 2.__ На всякий случай скчать все новые обновления с гитхаба (pull):
 
-```
+```console
 git pull
 ```
 
 __Шаг 3.__ Добавить новые файлы, папки и т.п. Данные на гитхаб не загружаем!
 
-```
+```console
 git add new_file.ipynb
 ```
 
 __Шаг 4.__ По всем добавленным файлам сохраняем текущую версию локально в version control (делаем commit). Не забываем указать осмысленное сообщение!
 
-```
+```console
 git commit -m "I did this and that"
 ```
 
 __Шаг 5.__ Отправляем коммит на гитхаб
 
-```
+```console
 git push
 ```
 
