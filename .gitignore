@@ -155,6 +155,7 @@ dmypy.json
 *.gz
 *.gzip
 *.txt
+*.arff
 
 # OS generated files#
 *.DS_Store
