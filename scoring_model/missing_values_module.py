@@ -27,7 +27,7 @@ def create_test_df(nans = True):
     test_df.x4 = np.where(test_df.x4 == 1, x5, None)
     return test_df
 
-def teach_to_separate(parent_transformer):
+def teach_to_separate(parent_class):
     """
     Returns an object, which does exactly the same as the parent class 'parent_transformer', but before doing so separates the data into numerical and categorical columns and applies the transformation only to numerical ones. It also returns DataFrame, even when the parent class by default returns, for example, a 3-d numpy array and renames principal components, if this approach is used like "PC1", "PC2" etc.
     Example of usage: 
@@ -37,7 +37,7 @@ def teach_to_separate(parent_transformer):
     >obj.fit(test_df)
     >obj.transform(test_df)
     
-    parent_transformer::class A parent class. Must have fit and transform attributes.
+    parent_class::class A parent class. Must have fit and transform attributes.
     
     Variables provided when instance is created:
     
@@ -53,40 +53,47 @@ def teach_to_separate(parent_transformer):
         def __init__(self, X, categorical_variables = []):
             self.X_numeric = X.drop(categorical_variables, 1)
             self.X_categorical = X.copy()[categorical_variables]
-
-    class ImputerSeparated(parent_transformer):
+    class ClassSeparated():
 
         def __init__(self, categorical_variables, functionality = "imputer", **kwargs):
-            super().__init__(**kwargs)
+            self.kwargs = kwargs
+            self.obj = parent_class(**self.kwargs)
             self.categorical_variables = categorical_variables
-            self.obj = parent_transformer(**kwargs)
             if functionality not in ["imputer", "PCA"]:
                 print(f"You inputed functionality {functionality}, but currently only\n 'imputer' and 'PCA' are implemented")
             self.functionality = functionality
-            
 
         def fit(self, X, y = None):
-
+    #         print("You are here 1")
             df = SeparatedDF(X, self.categorical_variables)
+    #         print(df.X_numeric)
+            self.check = "I fitted the object, I swear"
             self.obj.fit(df.X_numeric)
-
             return self
 
         def transform(self, X, y = None):
-
+    #         print("You are here 2")
+    #         print(self.check)
             df = SeparatedDF(X, self.categorical_variables)
-            
+    #         print(df)
+    #         print(df.X_numeric)
             fitted_df = self.obj.transform(df.X_numeric)
-            fitted_df = pd.DataFrame(fitted_df)
+    #         print(self.obj.__dict__)
 
+            fitted_df = pd.DataFrame(fitted_df)
             if self.functionality == "imputer":
                 fitted_df.columns = df.X_numeric.columns
             elif self.functionality == "PCA":
-                fitted_df.columns = [f"PC{i}" for i in range(1, self.obj.n_components+1)]
+                if self.obj.n_components is None:
+    #                 print(df.X_numeric.columns)
+                    self.obj.n_components = len(df.X_numeric.columns)
+                fitted_df.columns = [f"PC{i}" for i in range(1, self.obj.n_components +1)]
+    #         print(fitted_df)
             fitted_df = pd.concat([fitted_df, df.X_categorical], axis = 1)
-
+    #         print(df.X_categorical)
+    #         print(fitted_df)
             return fitted_df
-    return ImputerSeparated
+    return ClassSeparated
 
 
 def assert_identical_results_separated(imputer_class_basic,
