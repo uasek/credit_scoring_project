@@ -90,3 +90,5 @@ websocket-client==1.2.1
 xgboost==1.4.2
 xlrd==2.0.1
 zipp==3.6.0
+imblearn==0.8.1
+mlxtend==0.19.0
