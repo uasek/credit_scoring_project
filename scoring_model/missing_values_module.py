@@ -63,6 +63,21 @@ def teach_to_separate(parent_class):
                 print(f"You inputed functionality {functionality}, but currently only\n 'imputer' and 'PCA' are implemented")
             self.functionality = functionality
 
+        def fit_transform(self, X, y = None):
+            if hasattr(self.obj, "fit_transform"):
+                df = SeparatedDF(X, self.categorical_variables)
+                fitted_df = self.obj.fit_transform(df.X_numeric)
+                fitted_df = pd.DataFrame(fitted_df)
+                if self.functionality == "imputer":
+                    fitted_df.columns = df.X_numeric.columns
+                elif self.functionality == "PCA":
+                    if self.obj.n_components is None:
+                        self.obj.n_components = len(df.X_numeric.columns)
+                    fitted_df.columns = [f"PC{i}" for i in range(1, self.obj.n_components +1)]
+                fitted_df = pd.concat([fitted_df, df.X_categorical], axis = 1)
+                return fitted_df
+            else:
+                pass
         def fit(self, X, y = None):
     #         print("You are here 1")
             df = SeparatedDF(X, self.categorical_variables)
@@ -77,7 +92,10 @@ def teach_to_separate(parent_class):
             df = SeparatedDF(X, self.categorical_variables)
     #         print(df)
     #         print(df.X_numeric)
-            fitted_df = self.obj.transform(df.X_numeric)
+            if hasattr(self.obj, "transform"):
+                fitted_df = self.obj.transform(df.X_numeric)
+            elif hasattr(self.obj, "fit_transform"):
+                fitted_df = self.obj.fit_transform(df.X_numeric)
     #         print(self.obj.__dict__)
 
             fitted_df = pd.DataFrame(fitted_df)
