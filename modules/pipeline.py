@@ -5,6 +5,7 @@
 import numpy as np
 import pandas as pd
 import warnings
+from collections import OrderedDict
 
 from imblearn.pipeline import Pipeline
 from sklearn.model_selection import KFold
@@ -35,6 +36,7 @@ class PipeHPOpt(object):
             )
 
     def process(self, space, trials, algo, max_evals):
+        self._space = space
         try:
             result = fmin(fn=self._pipe, space=space, algo=algo, max_evals=max_evals, trials=trials)
         except Exception as e:
@@ -45,8 +47,8 @@ class PipeHPOpt(object):
         return result, trials
 
     def _pipe(self, para):
-        # print(para)
-        pipe_steps = [(para['pipe_params'][i], self.modules[para['pipe_params'][i]]) for i in para['pipe_params'] if para['pipe_params'][i] != 'skip']
+        pipe_steps = self.get_ordered_steps(para)
+        # print(pipe_steps)
         reg = Pipeline(pipe_steps)
         for p in para['set_params']:
             try:
@@ -76,13 +78,30 @@ class PipeHPOpt(object):
             losses.append(loss)
         return {'loss': np.mean(losses), 'params': para, 'status': STATUS_OK}
     
+    def get_ordered_steps(self, para):
+        # hp shuffles parameters, even OrderedDict(). To overcome this we
+        # import order from the input OrderedDict()
+        correct_order = list(self._space['pipe_params'].keys())
+        # print(correct_order)
+        hp_modules = para['pipe_params']
+        # print(hp_modules)
+        return [(hp_modules[i], self.modules[hp_modules[i]]) for i in correct_order if hp_modules[i] != 'skip']
+        # print(pipe_steps)
+    
     def get_best_params(self):
-        return self.trials.results[np.argmin([r['loss'] for r in self.trials.results])]['params']
+        best_params = self.trials.results[np.argmin([r['loss'] for r in self.trials.results])]['params']
+        pipe_params_adj = OrderedDict()
+        for i in list(self._space['pipe_params'].keys()):
+            pipe_params_adj[i] = best_params['pipe_params'][i]
+        best_params['pipe_params'] = pipe_params_adj
+        return best_params
     
     def get_best_model(self):
         para = self.get_best_params()
-        pipe_steps = [(para['pipe_params'][i], self.modules[para['pipe_params'][i]]) for i in para['pipe_params'] if para['pipe_params'][i] != 'skip']
+        # pipe_steps = [(para['pipe_params'][i], self.modules[para['pipe_params'][i]]) for i in para['pipe_params'] if para['pipe_params'][i] != 'skip']
+        pipe_steps = self.get_ordered_steps(para)
         reg = Pipeline(pipe_steps)
+        
         for p in para['set_params']:
             try:
                 reg.set_params(**{p: para['set_params'][p]})

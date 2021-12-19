@@ -15,6 +15,7 @@ from modules.missings import teach_to_separate
 from sklearn.impute import KNNImputer
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
+from modules.missings import missing_filler_mode
 
 # preprocessing
 from modules.preprocessing import DimensionReducer
@@ -61,10 +62,10 @@ OneHot_module = OneHotEncoder()
 # Missings
 MedImp_module = MeanMedianImputer(imputation_method='median')
 MeanImp_module = MeanMedianImputer(imputation_method='mean')
+ModeImp_module = missing_filler_mode()
 RandomImp_module = RandomSampleImputer()
 KNNImp_module = teach_to_separate(KNNImputer)
 IterImp_module = teach_to_separate(IterativeImputer)
-
 
 
 # Dimension Reducers
