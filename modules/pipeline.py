@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import warnings
 from collections import OrderedDict
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve, auc
 
 from imblearn.pipeline import Pipeline
 from sklearn.model_selection import KFold
@@ -47,11 +49,13 @@ class PipeHPOpt(object):
         return result, trials
 
     def _pipe(self, para):
-        pipe_steps = self.get_ordered_steps(para)
+        pipe_steps = self._get_ordered_steps(para)
         # print(pipe_steps)
         reg = Pipeline(pipe_steps)
         for p in para['set_params']:
             try:
+                if para['set_params'][p] == int(para['set_params'][p]):
+                    para['set_params'][p] = int(para['set_params'][p])
                 reg.set_params(**{p: para['set_params'][p]})
             except:
                 pass
@@ -78,15 +82,12 @@ class PipeHPOpt(object):
             losses.append(loss)
         return {'loss': np.mean(losses), 'params': para, 'status': STATUS_OK}
     
-    def get_ordered_steps(self, para):
+    def _get_ordered_steps(self, para):
         # hp shuffles parameters, even OrderedDict(). To overcome this we
         # import order from the input OrderedDict()
         correct_order = list(self._space['pipe_params'].keys())
-        # print(correct_order)
         hp_modules = para['pipe_params']
-        # print(hp_modules)
         return [(hp_modules[i], self.modules[hp_modules[i]]) for i in correct_order if hp_modules[i] != 'skip']
-        # print(pipe_steps)
     
     def get_best_params(self):
         best_params = self.trials.results[np.argmin([r['loss'] for r in self.trials.results])]['params']
@@ -98,12 +99,17 @@ class PipeHPOpt(object):
     
     def get_best_model(self):
         para = self.get_best_params()
-        # pipe_steps = [(para['pipe_params'][i], self.modules[para['pipe_params'][i]]) for i in para['pipe_params'] if para['pipe_params'][i] != 'skip']
-        pipe_steps = self.get_ordered_steps(para)
+        pipe_steps = self._get_ordered_steps(para)
         reg = Pipeline(pipe_steps)
         
         for p in para['set_params']:
             try:
+                # hyperopt cannot generate params as ints
+                # quniform returns params as round(),
+                # but most packages return error if, for example,
+                # num_leaves = 1.0
+                if para['set_params'][p] == int(para['set_params'][p]):
+                    para['set_params'][p] = int(para['set_params'][p])
                 reg.set_params(**{p: para['set_params'][p]})
             except:
                 pass
@@ -111,4 +117,74 @@ class PipeHPOpt(object):
         reg.fit(self.X, self.y)
         return reg
         
+    def plot_convergence(self, path=None, lw=2):
+        plt.plot(np.array([r['loss'] for r in self.trials.results]))
+        plt.title('Hyperopt: loss function dynamics')
+        plt.xlabel('Epoch')
+        if self.mode == 'kfold':
+            plt.ylabel('Average loss on k cross-validation samples')
+        if self.mode == 'valid':
+            plt.ylabel('Average loss on validation sample')
+        plt.show()
+        if path is not None:
+            plt.savefig(path)
+            
+    def plot_roc(self, X_train, y_train, X_test, y_test, mdl=None, path=None, lw=2):
+        # 2 modes are supported:
+        # > mode="roc" — builds ROC curve
+        # > mode="gain" — builds Gain curve
+        if mdl is None:
+            mdl = self.get_best_model()
+        y_train_pred = mdl.predict_proba(X_train)[:,1]
+        y_test_pred  = mdl.predict_proba(X_test)[:,1]
+        
+        # train
+        fpr, tpr, _ = roc_curve(y_train, y_train_pred)
+        roc_auc = auc(fpr, tpr)
+        plt.plot(fpr, tpr, color="navy", lw=lw, label="ROC curve (train, AUC = %0.3f)" % roc_auc)
+        
+        # test
+        fpr, tpr, thresholds = roc_curve(y_test, y_test_pred)
+        roc_auc = auc(fpr, tpr)
+        plt.plot(fpr, tpr, color="darkorange", lw=lw, label="ROC curve (test, AUC = %0.3f)" % roc_auc)
+        
+        plt.plot([0, 1], [0, 1], color="grey", lw=lw, linestyle="--")
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.title('Receiver operating characteristic (ROC) curve')
+        plt.xlabel("False Positive Rate")
+        plt.ylabel("True Positive Rate")
+        plt.legend(loc="lower right")
+        plt.show()
+        
+        if path is not None:
+            plt.savefig(path)
+            
     
+    def plot_gain(self, X_train, y_train, X_test, y_test, mdl=None, path=None, lw=2):
+        pass
+        
+    
+    def plot_lift(self, X_train, y_train, X_test, y_test, mdl=None, path=None, lw=2):
+        pass
+        
+    
+    def plot_precision_recall(self, X_train, y_train, X_test, y_test, mdl=None, path=None, lw=2):
+        pass
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
