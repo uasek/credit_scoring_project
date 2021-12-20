@@ -1,5 +1,8 @@
 ## IMPORTS
 import sklearn
+from collections import OrderedDict
+from hyperopt import hp
+
 # import umap
 import umap.umap_ as umap
 
@@ -182,4 +185,99 @@ def get_default_modules():
         
         # classifiers
         'lgbm':        lgbm_mdl
+    }
+
+
+def get_set_params():
+    return {
+        # OneHotEncoder does not need hyperparams
+        # RecFeatAdd might be redefined to receive a correct estimator
+        # PCA
+        # 'DimRed__PCA__n_components':      hp.choice('PCA__n_components',      np.arange(2, 11)),
+        'DimRed__PCA__n_components':      hp.quniform('DimRed__PCA__n_components', low=2, high=11, q=1),
+        'DimRed__PCA__whiten':            hp.choice('DimRed__PCA__whiten',            [True, False]),
+        'DimRed__PCA__svd_solver':        hp.choice('DimRed__PCA__svd_solver',        ['full', 'arpack', 'auto', 'randomized']),
+
+        # kPCA
+        # 'DimRed__kPCA__n_components':     hp.choice('kPCA__n_components',     np.arange(5, 11)),
+        'DimRed__kPCA__n_components':     hp.quniform('DimRed__kPCA__n_components', low=5, high=11, q=1),
+        'DimRed__kPCA__kernel':           hp.choice('DimRed__kPCA__kernel', ['linear', 'poly', 'rbf', 'sigmoid', 'cosine', 'precomputed']),
+
+        # Isomap
+        # 'DimRed__Isomap__n_neighbors':    hp.choice('Isomap__n_neighbors',    np.arange(2, 11)),
+        # 'DimRed__Isomap__n_components':   hp.choice('Isomap__n_components',   np.arange(2, 5)),
+        'DimRed__Isomap__n_neighbors':    hp.quniform('DimRed__Isomap__n_neighbors', low=2, high=5, q=1),
+        'DimRed__Isomap__n_components':   hp.quniform('DimRed__Isomap__n_components', low=2, high=11, q=1),
+        'DimRed__Isomap__path_method':    hp.choice('DimRed__Isomap__path_method',    ['auto', 'FW', 'D']),
+
+        # UMAP
+        # 'DimRed__UMAP__n_neighbors':      hp.choice('UMAP__n_neighbors',      np.arange(2, 11)),
+        # 'DimRed__UMAP__n_components':     hp.choice('UMAP__n_components',     np.arange(2, 11)),
+        # 'DimRed__UMAP__min_dist':         hp.choice('UMAP__min_dist',         np.arange(0.05, 1, 0.05)),
+        'DimRed__UMAP__n_neighbors':      hp.quniform('DimRed__UMAP__n_neighbors', low=2, high=11, q=1),
+        'DimRed__UMAP__n_components':     hp.quniform('DimRed__UMAP__n_components', low=2, high=11, q=1),
+        'DimRed__UMAP__min_dist':         hp.uniform('DimRed__UMAP__min_dist', low=.05, high=1),
+
+        # LightGBM
+        # 'lgbm__learning_rate':            hp.choice('lgbm__learning_rate',    np.arange(0.05, 0.31, 0.05)),
+        # 'lgbm__num_leaves':               hp.choice('lgbm__num_leaves',       np.arange(5, 16, 1, dtype=int)),
+        # 'lgbm__reg_alpha':                hp.choice('lgbm__reg_alpha',        np.arange(0, 16, 1, dtype=int)),
+        # 'lgbm__reg_lambda':               hp.choice('lgbm__reg_lambda',       np.arange(0, 16, 1, dtype=int)),
+        'lgbm__learning_rate':            hp.uniform('lgbm__learning_rate', low=.05, high=.31),
+        'lgbm__num_leaves':               hp.quniform('lgbm__num_leaves', low=5, high=32, q=1),
+        'lgbm__reg_alpha':                hp.uniform('lgbm__reg_alpha', low=0, high=16),
+        'lgbm__reg_lambda':               hp.uniform('lgbm__reg_lambda', low=0, high=16),
+        'lgbm__n_estimators':             100
+    }
+
+
+def get_fast_pipe():
+    pipe_params = OrderedDict()
+    pipe_params['cat_encoding'] = hp.choice('cat_encoding', ['OneHot', 'WoE'])
+    pipe_params['missing_vals'] = hp.choice('missing_vals', ['skip', 'MeanImp', 'MedImp']) 
+    pipe_params['imbalance']    = hp.choice('imbalance',    ['skip', 'RUS', 'ROS'])
+    pipe_params['feat_eng']     = hp.choice('feat_eng',     ['skip', 'PCA', 'kPCA']) 
+    pipe_params['feat_sel']     = hp.choice('feat_sel',     ['skip', 'SmartSel']) 
+    pipe_params['lgbm']         = 'lgbm'
+    return pipe_params
+
+
+def get_standard_pipe():
+    pipe_params = OrderedDict()
+    pipe_params['cat_encoding'] = hp.choice('cat_encoding', ['OneHot', 'WoE'])
+    pipe_params['missing_vals'] = hp.choice('missing_vals', ['skip', 'MeanImp', 'MedImp']) 
+    pipe_params['imbalance']    = hp.choice('imbalance',    ['skip', 'RUS', 'ROS', 'SMOTE', 'ADASYN'])
+    pipe_params['feat_eng']     = hp.choice('feat_eng',     ['skip', 'PCA', 'kPCA', 'Isomap', 'UMAP']) 
+    pipe_params['feat_sel']     = hp.choice('feat_sel',     ['skip', 'SeqFearSel', 'RecFeatAdd', 'SmartSel']) 
+    pipe_params['lgbm']         = 'lgbm'
+    return pipe_params
+
+
+def get_greedy_pipe():
+    pipe_params = OrderedDict()
+    pipe_params['cat_encoding'] = hp.choice('cat_encoding', ['OneHot', 'WoE'])
+    pipe_params['missing_vals'] = hp.choice('missing_vals', ['skip', 'MeanImp', 'MedImp', 'ModeImp', 'RandomImp', 'KNNImp', 'IterImp']) 
+    pipe_params['imbalance']    = hp.choice('imbalance',    ['skip', 'RUS', 'ROS', 'SMOTE', 'ADASYN'])
+    pipe_params['feat_eng']     = hp.choice('feat_eng',     ['skip', 'PCA', 'kPCA', 'Isomap', 'UMAP', 'CombWRef']) 
+    pipe_params['feat_sel']     = hp.choice('feat_sel',     ['skip', 'SeqFearSel', 'RecFeatAdd', 'SmartSel']) # 'SelShuffl'
+    pipe_params['lgbm']         = 'lgbm'
+    return pipe_params
+
+
+def get_space(mode='fast', loss=None):
+    set_params = get_set_params()
+    
+    if mode == 'fast':
+        pipe_params = get_fast_pipe()
+    elif mode == 'standard':
+        pipe_params = get_standard_pipe()
+    elif mode == 'greedy':
+        pipe_params = get_greedy_pipe()
+        
+    if loss is None:
+        loss = lambda y, pred: -sklearn.metrics.roc_auc_score(y, pred)
+    return {
+        'pipe_params': pipe_params,
+        'set_params': set_params,
+        'loss_func': loss
     }
