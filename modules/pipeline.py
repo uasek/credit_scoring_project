@@ -2,6 +2,7 @@
 # import xgboost as xgb
 # import catboost as ctb
 
+from functools import partial
 import numpy as np
 import pandas as pd
 import warnings
@@ -17,7 +18,8 @@ from hyperopt import fmin, tpe, STATUS_OK, STATUS_FAIL, Trials
 
 class PipeHPOpt(object):
 
-    def __init__(self, X, y, modules, mode='kfold', n_folds = 5, test_size=.33, seed=42):
+    def __init__(self, #X, y, 
+                 modules, mode='kfold', n_folds = 5, test_size=.33, seed=42):
         if (mode != 'kfold') & (mode != 'valid'):
             raise ValueError("Choose mode 'kfold' or 'valid'")
         if (mode == 'valid') & (n_folds != 5):
@@ -25,30 +27,39 @@ class PipeHPOpt(object):
         if (mode == 'kfold') & (test_size != .33):
             warnings.warn("Non-default test_size won't be used since mode == kfold!")
             
-        self.X       = X
-        self.y       = y
+        # self.X       = X
+        # self.y       = y
         self.mode    = mode
         self.n_folds = n_folds
         self.seed    = seed
         self.modules = modules 
         
-        if mode == 'valid':
-            self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(
-                X, y, test_size=test_size, random_state=seed
-            )
+        # if mode == 'valid':
+        #     self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(
+        #         X, y, test_size=test_size, random_state=seed
+        #     )
 
-    def process(self, space, trials, algo, max_evals):
+    def process(self, X, y, space, trials, algo, max_evals):
         self._space = space
-        try:
-            result = fmin(fn=self._pipe, space=space, algo=algo, max_evals=max_evals, trials=trials)
-        except Exception as e:
-            return {'status': STATUS_FAIL,
-                    'exception': str(e)}
+        
+        if self.mode == 'kfold':
+            kf = KFold(n_splits=self.n_folds, shuffle=True, random_state=self.seed)
+            _k_idx = kf.split(self.X)
+            _pipe_partial = partial(self._pipe, _k_idx=_k_idx)
+        
+        elif self.mode == 'valid':
+            x_train, x_test, y_train, y_test = train_test_split(
+                X, y, test_size=self.test_size, random_state=self.seed
+            )
+            _pipe_partial = partial(self._pipe, x_train=x_train, x_test=x_test, y_train=y_train, y_test=y_test)
+        
+        result = fmin(fn=_pipe_partial, space=space, algo=algo, max_evals=max_evals, trials=trials)
+        
         self.result = result
         self.trials = trials
         return result, trials
 
-    def _pipe(self, para):
+    def _pipe(self, para, x_train=None, x_test=None, y_train=None, y_test=None, X=None, y=None, _k_idx=None):
         pipe_steps = self._get_ordered_steps(para)
         # print(pipe_steps)
         reg = Pipeline(pipe_steps)
@@ -60,22 +71,21 @@ class PipeHPOpt(object):
             except:
                 pass
         if self.mode == 'kfold':
-            return self._train_reg_kfold(reg, para)
+            return self._train_reg_kfold(reg, para, X, y, _k_idx)
         elif self.mode == 'valid':
-            return self._train_reg_valid(reg, para)
+            return self._train_reg_valid(reg, para, x_train, x_test, y_train, y_test)
 
-    def _train_reg_valid(self, reg, para):
+    def _train_reg_valid(self, reg, para, x_train, x_test, y_train, y_test):
         reg.fit(self.x_train, self.y_train)
         pred = reg.predict_proba(self.x_test)[:, 1]
         loss = para['loss_func'](self.y_test, pred)
         return {'loss': loss, 'model': reg, 'params': para, 'status': STATUS_OK}
     
-    def _train_reg_kfold(self, reg, para):
-        kf = KFold(n_splits=5, shuffle=True, random_state=self.seed)
+    def _train_reg_kfold(self, reg, para, X, y, _k_idx):
         losses = []
-        for train_index, test_index in kf.split(self.X):
-            X_split_train, X_split_test = self.X.iloc[train_index, :], self.X.iloc[test_index, :]
-            y_split_train, y_split_test = self.y.iloc[train_index, ],  self.y.iloc[test_index, ]
+        for train_index, test_index in _k_idx:
+            X_split_train, X_split_test = X.iloc[train_index, :], X.iloc[test_index, :]
+            y_split_train, y_split_test = y.iloc[train_index, ],  y.iloc[test_index, ]
             reg.fit(X_split_train, y_split_train)
             pred = reg.predict_proba(X_split_test)[:, 1]
             loss = para['loss_func'](y_split_test, pred)
