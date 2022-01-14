@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
-import missing_values_module as mvm
-import cliques_filter_module as cliques 
+import modules.missing_values_module as mvm
+import modules.cliques_filter_module as cliques 
 
 
 class OutputCorrelationFilter():
@@ -13,10 +13,9 @@ class OutputCorrelationFilter():
                 corr_metrics = "pearson"
                 ):
         
-        
-        if np.array([n_features, share_features, max_acceptable_correlation]).sum() > 1:
+        if (np.array([n_features, share_features, max_acceptable_correlation]) != False).sum() > 1:
             raise ValueError("Please, predefine ONE OF: acceptable correlation, share of features or number of features")
-        if np.array([n_features, share_features, max_acceptable_correlation]).sum() == 0:
+        if (np.array([n_features, share_features, max_acceptable_correlation]) != False).sum() == 0:
             raise ValueError("Please, choose either acceptable correlation, share of features or number of features")
             
         self.n_features = n_features
@@ -57,9 +56,9 @@ class MutualCorrelationFilter():
                 ):
         
         
-        if np.array([n_features, share_features, max_acceptable_correlation]).sum() > 1:
+        if (np.array([n_features, share_features, max_acceptable_correlation]) != False).sum() > 1:
             raise ValueError("Please, predefine ONE OF: acceptable correlation, share of features or number of features")
-        if np.array([n_features, share_features, max_acceptable_correlation]).sum() == 0:
+        if (np.array([n_features, share_features, max_acceptable_correlation]) != False).sum() == 0:
             raise ValueError("Please, choose either acceptable correlation, share of features or number of features")
             
         self.n_features = n_features
