@@ -18,46 +18,44 @@ from hyperopt import fmin, tpe, STATUS_OK, STATUS_FAIL, Trials
 
 class PipeHPOpt(object):
 
-    def __init__(self, #X, y, 
-                 modules, mode='kfold', n_folds = 5, test_size=.33, seed=42):
+    def __init__(self,
+                 modules, 
+                 mode='kfold', 
+                 n_folds = 5, 
+                 test_size=.33, 
+                 seed=42):
+        
         if (mode != 'kfold') & (mode != 'valid'):
             raise ValueError("Choose mode 'kfold' or 'valid'")
         if (mode == 'valid') & (n_folds != 5):
             warnings.warn("Non-default n_folds won't be used since mode == valid!")
         if (mode == 'kfold') & (test_size != .33):
             warnings.warn("Non-default test_size won't be used since mode == kfold!")
-            
-        # self.X       = X
-        # self.y       = y
+    
         self.mode    = mode
         self.n_folds = n_folds
         self.seed    = seed
         self.modules = modules 
-        
-        # if mode == 'valid':
-        #     self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(
-        #         X, y, test_size=test_size, random_state=seed
-        #     )
 
-    def process(self, X, y, space, trials, algo, max_evals):
-        self._space = space
-        
+    def train(self, X, y, space, trials, algo, max_evals):
+        self._last_space = space
+        # We make all splits before optimization to make results more stable
+        # and to improve overall performance
         if self.mode == 'kfold':
             kf = KFold(n_splits=self.n_folds, shuffle=True, random_state=self.seed)
-            _k_idx = kf.split(self.X)
-            _pipe_partial = partial(self._pipe, _k_idx=_k_idx)
-        
+            _k_idx = kf.split(X)
+            _pipe_partial = partial(self._pipe, X=X, y=y, _k_idx=_k_idx)
         elif self.mode == 'valid':
             x_train, x_test, y_train, y_test = train_test_split(
                 X, y, test_size=self.test_size, random_state=self.seed
             )
             _pipe_partial = partial(self._pipe, x_train=x_train, x_test=x_test, y_train=y_train, y_test=y_test)
-        
         result = fmin(fn=_pipe_partial, space=space, algo=algo, max_evals=max_evals, trials=trials)
-        
         self.result = result
         self.trials = trials
-        return result, trials
+        self.best_params = self._get_best_params()
+        self.best_model = self._get_best_model(X, y)
+        return self.best_model, self.best_params, trials
 
     def _pipe(self, para, x_train=None, x_test=None, y_train=None, y_test=None, X=None, y=None, _k_idx=None):
         pipe_steps = self._get_ordered_steps(para)
@@ -76,9 +74,9 @@ class PipeHPOpt(object):
             return self._train_reg_valid(reg, para, x_train, x_test, y_train, y_test)
 
     def _train_reg_valid(self, reg, para, x_train, x_test, y_train, y_test):
-        reg.fit(self.x_train, self.y_train)
-        pred = reg.predict_proba(self.x_test)[:, 1]
-        loss = para['loss_func'](self.y_test, pred)
+        reg.fit(x_train, y_train)
+        pred = reg.predict_proba(x_test)[:, 1]
+        loss = para['loss_func'](y_test, pred)
         return {'loss': loss, 'model': reg, 'params': para, 'status': STATUS_OK}
     
     def _train_reg_kfold(self, reg, para, X, y, _k_idx):
@@ -95,23 +93,22 @@ class PipeHPOpt(object):
     def _get_ordered_steps(self, para):
         # hp shuffles parameters, even OrderedDict(). To overcome this we
         # import order from the input OrderedDict()
-        correct_order = list(self._space['pipe_params'].keys())
+        correct_order = list(self._last_space['pipe_params'].keys())
         hp_modules = para['pipe_params']
         return [(hp_modules[i], self.modules[hp_modules[i]]) for i in correct_order if hp_modules[i] != 'skip']
     
-    def get_best_params(self):
+    def _get_best_params(self):
         best_params = self.trials.results[np.argmin([r['loss'] for r in self.trials.results])]['params']
         pipe_params_adj = OrderedDict()
-        for i in list(self._space['pipe_params'].keys()):
+        for i in list(self._last_space['pipe_params'].keys()):
             pipe_params_adj[i] = best_params['pipe_params'][i]
         best_params['pipe_params'] = pipe_params_adj
         return best_params
     
-    def get_best_model(self):
-        para = self.get_best_params()
+    def _get_best_model(self, X, y):
+        para = self._get_best_params()
         pipe_steps = self._get_ordered_steps(para)
         reg = Pipeline(pipe_steps)
-        
         for p in para['set_params']:
             try:
                 # hyperopt cannot generate params as ints
@@ -123,8 +120,7 @@ class PipeHPOpt(object):
                 reg.set_params(**{p: para['set_params'][p]})
             except:
                 pass
-            
-        reg.fit(self.X, self.y)
+        reg.fit(X, y)
         return reg
         
     def plot_convergence(self, path=None, lw=2):
@@ -174,11 +170,9 @@ class PipeHPOpt(object):
     def plot_gain(self, X_train, y_train, X_test, y_test, mdl=None, path=None, lw=2):
         pass
         
-    
     def plot_lift(self, X_train, y_train, X_test, y_test, mdl=None, path=None, lw=2):
         pass
         
-    
     def plot_precision_recall(self, X_train, y_train, X_test, y_test, mdl=None, path=None, lw=2):
         pass
         
