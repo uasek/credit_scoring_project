@@ -64,6 +64,8 @@ class PipeHPOpt(object):
         
         # minibatch size for train & test
         total_obs = X.shape[0]
+        if minibatch is False:
+            n = total_obs
         n_train = self._get_minibatch_size(total_obs, n, frac, 'train', self.mode, self.n_folds, self.test_size, verbose)
         n_test  = self._get_minibatch_size(total_obs, n, frac, 'test',  self.mode, self.n_folds, self.test_size, verbose)
         
