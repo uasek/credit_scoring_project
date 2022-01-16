@@ -34,22 +34,54 @@ class PipeHPOpt(object):
     
         self.mode    = mode
         self.n_folds = n_folds
+        self.test_size = test_size
         self.seed    = seed
         self.modules = modules 
 
-    def train(self, X, y, space, trials, algo, max_evals):
+    def _get_minibatch_size(self, total_obs, n, frac, tp, mode, n_folds, test_size, verbose=True):
+        if n > total_obs:
+            n = total_obs
+        if frac is not None:
+            n = int(np.ceil(total_obs * frac))
+        if mode == 'valid':
+            # calculate n
+            if tp == 'train':
+                n = int(np.ceil(n * (1 - test_size)))
+            if tp == 'test':
+                n = int(np.ceil(n * test_size))
+        if mode == 'kfold':
+            if tp == 'train':
+                n = int(np.ceil(n / n_folds * (n_folds - 1)))
+            if tp == 'test':
+                n = int(np.ceil(n / n_folds))
+        if verbose:
+            print(f"Size of {tp} minibatch is {n} obs.")
+        return n
+            
+        
+    def train(self, X, y, space, trials, algo, max_evals, minibatch=True, n=1000, frac=None, verbose=False):
         self._last_space = space
+        
+        # minibatch size for train & test
+        total_obs = X.shape[0]
+        n_train = self._get_minibatch_size(total_obs, n, frac, 'train', self.mode, self.n_folds, self.test_size, verbose)
+        n_test  = self._get_minibatch_size(total_obs, n, frac, 'test',  self.mode, self.n_folds, self.test_size, verbose)
+        
         # We make all splits before optimization to make results more stable
         # and to improve overall performance
         if self.mode == 'kfold':
             kf = KFold(n_splits=self.n_folds, shuffle=True, random_state=self.seed)
             _k_idx = kf.split(X)
-            _pipe_partial = partial(self._pipe, X=X, y=y, _k_idx=_k_idx)
+            _pipe_partial = partial(self._pipe, X=X, y=y, _k_idx=_k_idx, n_train=n_train, n_test=n_test)
         elif self.mode == 'valid':
             x_train, x_test, y_train, y_test = train_test_split(
                 X, y, test_size=self.test_size, random_state=self.seed
             )
-            _pipe_partial = partial(self._pipe, x_train=x_train, x_test=x_test, y_train=y_train, y_test=y_test)
+            _pipe_partial = partial(
+                self._pipe, 
+                x_train=x_train, x_test=x_test, y_train=y_train, y_test=y_test, 
+                n_train=n_train, n_test=n_test
+            )
         result = fmin(fn=_pipe_partial, space=space, algo=algo, max_evals=max_evals, trials=trials)
         self.result = result
         self.trials = trials
@@ -57,7 +89,7 @@ class PipeHPOpt(object):
         self.best_model = self._get_best_model(X, y)
         return self.best_model, self.best_params, trials
 
-    def _pipe(self, para, x_train=None, x_test=None, y_train=None, y_test=None, X=None, y=None, _k_idx=None):
+    def _pipe(self, para, x_train=None, x_test=None, y_train=None, y_test=None, X=None, y=None, _k_idx=None, n_train=None, n_test=None):
         pipe_steps = self._get_ordered_steps(para)
         # print(pipe_steps)
         reg = Pipeline(pipe_steps)
@@ -69,21 +101,32 @@ class PipeHPOpt(object):
             except:
                 pass
         if self.mode == 'kfold':
-            return self._train_reg_kfold(reg, para, X, y, _k_idx)
+            return self._train_reg_kfold(reg, para, X, y, _k_idx, n_train, n_test)
         elif self.mode == 'valid':
-            return self._train_reg_valid(reg, para, x_train, x_test, y_train, y_test)
-
-    def _train_reg_valid(self, reg, para, x_train, x_test, y_train, y_test):
+            return self._train_reg_valid(reg, para, x_train, x_test, y_train, y_test, n_train, n_test)
+        
+    def _train_reg_valid(self, reg, para, x_train, x_test, y_train, y_test, n_train=None, n_test=None):
+        x_train = x_train.sample(n_train)
+        x_test  = x_test.sample(n_test)
+        y_train = y_train[x_train.index]
+        y_test  = y_train[x_test.index]
+        
         reg.fit(x_train, y_train)
         pred = reg.predict_proba(x_test)[:, 1]
         loss = para['loss_func'](y_test, pred)
         return {'loss': loss, 'model': reg, 'params': para, 'status': STATUS_OK}
     
-    def _train_reg_kfold(self, reg, para, X, y, _k_idx):
+    def _train_reg_kfold(self, reg, para, X, y, _k_idx, n_train=None, n_test=None):
         losses = []
         for train_index, test_index in _k_idx:
             X_split_train, X_split_test = X.iloc[train_index, :], X.iloc[test_index, :]
-            y_split_train, y_split_test = y.iloc[train_index, ],  y.iloc[test_index, ]
+            y_split_train, y_split_test = y.iloc[train_index, ],  y.iloc[test_index, ]            
+            
+            X_split_train = X_split_train.sample(n_train)
+            X_split_test  = X_split_test.sample(n_test)
+            y_split_train = y_split_train[X_split_train.index]
+            y_split_test  = y_split_test[X_split_test.index]            
+            
             reg.fit(X_split_train, y_split_train)
             pred = reg.predict_proba(X_split_test)[:, 1]
             loss = para['loss_func'](y_split_test, pred)
