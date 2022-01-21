@@ -20,8 +20,14 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
 from modules.missings import missing_filler_mode
 
+# Scalers
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import RobustScaler
+
 # preprocessing
 from modules.preprocessing import DimensionReducer
+from modules.preprocessing import TransformerAdj
 
 # imbalanced
 from imblearn.over_sampling import RandomOverSampler
@@ -35,6 +41,9 @@ from mlxtend.feature_selection import SequentialFeatureSelector
 from feature_engine.selection  import SelectByShuffling
 from feature_engine.selection  import RecursiveFeatureAddition
 from feature_engine.selection  import SmartCorrelatedSelection
+
+# clustering as feature engineering method
+
 
 # classifiers
 from catboost import CatBoostClassifier
@@ -69,6 +78,12 @@ ModeImp_module = missing_filler_mode()
 RandomImp_module = RandomSampleImputer()
 KNNImp_module = teach_to_separate(KNNImputer)
 IterImp_module = teach_to_separate(IterativeImputer)
+
+
+# Scalers
+StandSc_module  = TransformerAdj(sklearn.preprocessing.StandardScaler, '_scl')
+MinMaxSc_module = TransformerAdj(sklearn.preprocessing.MinMaxScaler,   '_scl')
+StandSc_module  = TransformerAdj(sklearn.preprocessing.RobustScaler,   '_scl')
 
 
 # Dimension Reducers
@@ -146,6 +161,14 @@ SmartSel_module = SmartCorrelatedSelection(
 )
 
 
+
+
+
+
+
+
+
+
 ## GET DEFAULT MODULES
 def get_default_modules():
     # eval
@@ -160,12 +183,17 @@ def get_default_modules():
         'RandomImp':   RandomImp_module,
         'KNNImp':      KNNImp_module, 
         'IterImp':     IterImp_module, 
-        
+          
         # reducers
         'PCA':         PCA_module,
         'kPCA':        kPCA_module,
         'Isomap':      Isomap_module,
         'UMAP':        UMAP_module,
+        
+        # scalers
+        'StandSc':     StandSc_module,
+        'MinMax':      MinMaxSc_module,
+        'StandSc':     StandSc_module, 
         
         # feature engineering
         'CombWRef':    CombWRef_module,
@@ -247,8 +275,9 @@ def get_standard_pipe():
     pipe_params['cat_encoding'] = hp.choice('cat_encoding', ['OneHot', 'WoE'])
     pipe_params['missing_vals'] = hp.choice('missing_vals', ['skip', 'MeanImp', 'MedImp']) 
     pipe_params['imbalance']    = hp.choice('imbalance',    ['skip', 'RUS', 'ROS', 'SMOTE', 'ADASYN'])
+    pipe_params['scaler']       = hp.choice('scaler',       ['skip', 'StandSc', 'MinMax', 'StandSc'])
     pipe_params['feat_eng']     = hp.choice('feat_eng',     ['skip', 'PCA', 'kPCA', 'Isomap', 'UMAP']) 
-    pipe_params['feat_sel']     = hp.choice('feat_sel',     ['skip', 'SeqFearSel', 'RecFeatAdd', 'SmartSel']) 
+    pipe_params['feat_sel']     = hp.choice('feat_sel',     ['skip', 'SeqFearSel', 'RecFeatAdd'])  # , 'SmartSel'
     pipe_params['lgbm']         = 'lgbm'
     return pipe_params
 
@@ -258,8 +287,9 @@ def get_greedy_pipe():
     pipe_params['cat_encoding'] = hp.choice('cat_encoding', ['OneHot', 'WoE'])
     pipe_params['missing_vals'] = hp.choice('missing_vals', ['skip', 'MeanImp', 'MedImp', 'ModeImp', 'RandomImp', 'KNNImp', 'IterImp']) 
     pipe_params['imbalance']    = hp.choice('imbalance',    ['skip', 'RUS', 'ROS', 'SMOTE', 'ADASYN'])
+    pipe_params['scaler']       = hp.choice('scaler',       ['skip', 'StandSc', 'MinMax', 'StandSc'])
     pipe_params['feat_eng']     = hp.choice('feat_eng',     ['skip', 'PCA', 'kPCA', 'Isomap', 'UMAP', 'CombWRef']) 
-    pipe_params['feat_sel']     = hp.choice('feat_sel',     ['skip', 'SeqFearSel', 'RecFeatAdd', 'SmartSel']) # 'SelShuffl'
+    pipe_params['feat_sel']     = hp.choice('feat_sel',     ['skip', 'SeqFearSel', 'RecFeatAdd']) # 'SelShuffl', 'SmartSel'
     pipe_params['lgbm']         = 'lgbm'
     return pipe_params
 
