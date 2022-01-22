@@ -43,7 +43,7 @@ from feature_engine.selection  import RecursiveFeatureAddition
 from feature_engine.selection  import SmartCorrelatedSelection
 
 # clustering as feature engineering method
-
+from modules.clusters import ClusterConstr
 
 # classifiers
 from catboost import CatBoostClassifier
@@ -84,6 +84,33 @@ IterImp_module = teach_to_separate(IterativeImputer)
 StandSc_module  = TransformerAdj(sklearn.preprocessing.StandardScaler, '_scl')
 MinMaxSc_module = TransformerAdj(sklearn.preprocessing.MinMaxScaler,   '_scl')
 StandSc_module  = TransformerAdj(sklearn.preprocessing.RobustScaler,   '_scl')
+
+# Clustering Models
+kmeans_module = ClusterConstr(
+    sklearn.cluster.KMeans, 
+    affx = 'clust',
+    n_clusters = 2,     # Число кластеров
+    init = 'k-means++', # Метод установки первых точек
+    algorithm = 'auto'  # Какой алгоритм юзать
+)
+
+mbatch_kmeans_module = ClusterConstr(
+    sklearn.cluster.MiniBatchKMeans, 
+    affx = 'clust',
+    n_clusters = 2,     # Число кластеров
+    init = 'k-means++', #Метод установки первых точек
+    batch_size = 1024, #Размер Batch
+    reassignment_ratio = 0.01, #Параметр регуляризации
+    random_state = 42
+)
+
+birch_module = ClusterConstr(
+    sklearn.cluster.Birch, 
+    affx = 'clust',
+    n_clusters = 2,
+    branching_factor = 50,
+    threshold = 0.52 #Параметр регуляризации
+) 
 
 
 # Dimension Reducers
@@ -190,6 +217,11 @@ def get_default_modules():
         'Isomap':      Isomap_module,
         'UMAP':        UMAP_module,
         
+        # clustering models
+        'kmeans':      kmeans_module,
+        'mbatch_kmeans': mbatch_kmeans_module,
+        'birch':       birch_module,
+        
         # scalers
         'StandSc':     StandSc_module,
         'MinMax':      MinMaxSc_module,
@@ -268,8 +300,8 @@ def get_fast_pipe():
     pipe_params['feat_sel']     = hp.choice('feat_sel',     ['skip', 'SmartSel']) 
     pipe_params['lgbm']         = 'lgbm'
     return pipe_params
-
-
+     
+    
 def get_standard_pipe():
     pipe_params = OrderedDict()
     pipe_params['cat_encoding'] = hp.choice('cat_encoding', ['OneHot', 'WoE'])
@@ -277,6 +309,7 @@ def get_standard_pipe():
     pipe_params['imbalance']    = hp.choice('imbalance',    ['skip', 'RUS', 'ROS', 'SMOTE', 'ADASYN'])
     pipe_params['scaler']       = hp.choice('scaler',       ['skip', 'StandSc', 'MinMax', 'StandSc'])
     pipe_params['feat_eng']     = hp.choice('feat_eng',     ['skip', 'PCA', 'kPCA', 'Isomap', 'UMAP']) 
+    pipe_params['clusters']     = hp.choice('clusters',     ['skip', 'kmeans', 'mbatch_kmeans']) 
     pipe_params['feat_sel']     = hp.choice('feat_sel',     ['skip', 'SeqFearSel', 'RecFeatAdd'])  # , 'SmartSel'
     pipe_params['lgbm']         = 'lgbm'
     return pipe_params
@@ -289,6 +322,7 @@ def get_greedy_pipe():
     pipe_params['imbalance']    = hp.choice('imbalance',    ['skip', 'RUS', 'ROS', 'SMOTE', 'ADASYN'])
     pipe_params['scaler']       = hp.choice('scaler',       ['skip', 'StandSc', 'MinMax', 'StandSc'])
     pipe_params['feat_eng']     = hp.choice('feat_eng',     ['skip', 'PCA', 'kPCA', 'Isomap', 'UMAP', 'CombWRef']) 
+    pipe_params['clusters']     = hp.choice('clusters',     ['skip', 'kmeans', 'mbatch_kmeans', 'birch']) 
     pipe_params['feat_sel']     = hp.choice('feat_sel',     ['skip', 'SeqFearSel', 'RecFeatAdd']) # 'SelShuffl', 'SmartSel'
     pipe_params['lgbm']         = 'lgbm'
     return pipe_params
