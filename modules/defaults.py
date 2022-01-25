@@ -269,6 +269,16 @@ def get_default_modules():
 
 def get_set_params():
     return {
+        # StandSc does not need hyperparams
+        # MinMax does not need hyperparams
+        # Winsorizer
+        'fold':                           hp.quniform('fold',   low = 2, high = 4, q = 1),
+        # Log transformation
+        'base':                           hp.choice('base',   ['e', '10']),
+        # Power transformation 
+        'lambda':                         hp.quniform('lambda', low=2, high=11, q=1),
+        # YeoJohnsonTransformer - функция максимизирует единственный параметр, нет нужды его задавать
+        # WoE does not need hyperparams
         # OneHotEncoder does not need hyperparams
         # RecFeatAdd might be redefined to receive a correct estimator
         # PCA
@@ -339,7 +349,7 @@ def get_greedy_pipe():
     pipe_params['cat_encoding'] = hp.choice('cat_encoding', ['OneHot', 'WoE'])
     pipe_params['missing_vals'] = hp.choice('missing_vals', ['skip', 'MeanImp', 'MedImp', 'ModeImp', 'RandomImp', 'KNNImp', 'IterImp']) 
     pipe_params['imbalance']    = hp.choice('imbalance',    ['skip', 'RUS', 'ROS', 'SMOTE', 'ADASYN'])
-    pipe_params['scaler']       = hp.choice('scaler',       ['skip', 'StandSc', 'MinMax', 'StandSc', 'WinsTrans', 'LogTrans', 'PwrTrans',  'YeoJTrans']) # 'BxCxTrans',
+    pipe_params['scaler']       = hp.choice('scaler',       ['skip', 'StandSc', 'MinMax', 'WinsTrans', 'LogTrans', 'PwrTrans',  'YeoJTrans']) # 'BxCxTrans', 'StandSc' указан дважды, дропнул (с) ваня п.
     pipe_params['feat_eng']     = hp.choice('feat_eng',     ['skip', 'PCA', 'kPCA', 'Isomap', 'UMAP', 'CombWRef']) 
     pipe_params['clusters']     = hp.choice('clusters',     ['skip', 'kmeans', 'mbatch_kmeans', 'birch']) 
     pipe_params['feat_sel']     = hp.choice('feat_sel',     ['skip', 'SeqFearSel', 'RecFeatAdd']) # 'SelShuffl', 'SmartSel'
