@@ -46,13 +46,15 @@ class OutputCorrelationFilter():
         return X[self.desired_names]
 
     
+
 class MutualCorrelationFilter():
     
     def __init__(
                 self, n_features = False, 
                 share_features = False, 
                 max_acceptable_correlation = False,
-                corr_metrics = "pearson"
+                corr_metrics = "pearson",
+                categorical_variables = []
                 ):
         
         
@@ -65,17 +67,21 @@ class MutualCorrelationFilter():
         self.share_features = share_features
         self.corr_metrics = corr_metrics
         self.max_acceptable_correlation = max_acceptable_correlation
-        
+        self.categorical_variables = categorical_variables
+
     def fit(self, X, y = None):
-        
+        X_separated = SeparatedDF(X, self.categorical_variables, ignore_dummies = True)
         if self.share_features != False:
             self.n_features = round(len(X.columns) * self.share_features)
         
         if (self.n_features == 0)&(self.share_features != False):
             self.n_features = 1
         
-        current_df = X.copy()
+        current_df = X_separated.X_numeric.copy()
+        
         while len(current_df.columns) > self.n_features:
+#             breakpoint()
+
             current_corr = current_df.corr(method = self.corr_metrics).unstack().sort_values(ascending = False)
             for i in range(len(current_corr)):
                 column_names = current_corr.index[i]
@@ -87,18 +93,20 @@ class MutualCorrelationFilter():
             if len(current_df.columns) == 1:
                 break
                 
-            if corr_value <= self.max_acceptable_correlation:
+            if np.abs(corr_value) <= self.max_acceptable_correlation:
                 break
                 
             current_df.drop(most_correlated_column, axis = 1, inplace = True)
-            
+        
         self.desired_names = current_df.columns.tolist()
+        self.correlated_names = list(set(X.columns) - set(self.desired_names))
         
         return self
     
     def transform(self, X, y= None):
-        
-        return X[self.desired_names]
+        X_reunited = pd.concat([X[self.desired_names], X[find_dummies(X)], X[self.categorical_variables]], axis = 1)
+        X_reunited = X_reunited.loc[:,~X_reunited.columns.duplicated()]
+        return X_reunited
         
 class VIFFilter():
     

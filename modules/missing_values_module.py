@@ -2,6 +2,7 @@
 
 import numpy as np
 import pandas as pd
+import feature_filters as filters
 
 def create_test_df(nans = True):
     x1 = np.random.normal(size = 10000)
@@ -45,74 +46,120 @@ def teach_to_separate(parent_class):
     
     functionality::str A string which defines what type of transformer class you are modifying. Currently there are option 'imputer' for all the imputers and 'PCA' for sklearn.PCA. 
     
+    ignore_dummies::Bool True to treat 0,1 variables as categorical
+    
+    For example of usage with the following paramters see checks\SubsamplePCA
+    
+    subset_correlated::int Input number or share of most correlated features to turn to principal components or minimal acceptable correlation between them
+    
+    type_subset::str "number" if subset_correlated is for number of features, "share" for share, "corr" for minimal correlation
+    
+    subset_pca::int Input number of variables, which are most impactful for simple PCA to turn to principal components
+    
+    cum_var_desired:: Cumulative variance, which is explained by PCA components which are taken into account for subset_pca
+    
     **kwargs Any arguments passed to parent class itself
     
     """
+
     
-    class SeparatedDF():
-        def __init__(self, X, categorical_variables = []):
-            self.X_numeric = X.drop(categorical_variables, 1)
-            self.X_categorical = X.copy()[categorical_variables]
+
+            
     class ClassSeparated():
 
-        def __init__(self, categorical_variables, functionality = "imputer", **kwargs):
+        def __init__(self, categorical_variables, functionality = "imputer", ignore_dummies = False, subset_correlated = 0, type_subset = "number", subset_pca = 0, cum_var_desired = 1, **kwargs):
             self.kwargs = kwargs
             self.obj = parent_class(**self.kwargs)
             self.categorical_variables = categorical_variables
+            self.ignore_dummies = ignore_dummies
+            self.subset_correlated = subset_correlated
+            self.type_subset = type_subset
+            self.subset_pca = subset_pca
+            self.cum_var_desired = cum_var_desired
             if functionality not in ["imputer", "PCA"]:
                 print(f"You inputed functionality {functionality}, but currently only\n 'imputer' and 'PCA' are implemented")
             self.functionality = functionality
 
-        def fit_transform(self, X, y = None):
-            if hasattr(self.obj, "fit_transform"):
-                df = SeparatedDF(X, self.categorical_variables)
-                fitted_df = self.obj.fit_transform(df.X_numeric)
-                fitted_df = pd.DataFrame(fitted_df)
-                if self.functionality == "imputer":
-                    fitted_df.columns = df.X_numeric.columns
-                elif self.functionality == "PCA":
-                    if self.obj.n_components is None:
-                        self.obj.n_components = len(df.X_numeric.columns)
-                    fitted_df.columns = [f"PC{i}" for i in range(1, self.obj.n_components +1)]
-                fitted_df = pd.concat([fitted_df, df.X_categorical], axis = 1)
-                return fitted_df
-            else:
-                pass
         def fit(self, X, y = None):
-    #         print("You are here 1")
-            df = SeparatedDF(X, self.categorical_variables)
-    #         print(df.X_numeric)
+            self.old_columns = X.columns
+            
+            if self.subset_correlated > 0:
+                metaparams = {'number' : 'n_features',
+                             'share' : 'share_features',
+                             'corr' : 'max_acceptable_correlation'}
+                params = {metaparams[self.type_subset] : self.subset_correlated, 
+                         'categorical_variables' : self.categorical_variables}
+                Filter = filters.MutualCorrelationFilter(**params)
+                Filter.fit(X)
+                self.categorical_variables = list(set(Filter.correlated_names + self.categorical_variables))
+
+            df = SeparatedDF(X, self.categorical_variables, self.ignore_dummies)
+                
+            if self.subset_pca > 0:
+                
+                names = df.X_numeric.columns
+                
+                test_obj = PCA( n_components = len(names))
+                test_obj.fit(df.X_numeric, test_df.target)
+                test_obj.transform(df.X_numeric)
+                
+                
+                components_table = pd.DataFrame(test_obj.components_)
+                components_table.columns = names
+
+                cum_var_explained = test_obj.explained_variance_ratio_.cumsum()
+                number_to_subset = sum(cum_var_explained < self.cum_var_desired)
+
+                components_of_interest_table = components_table[:number_to_subset]
+                variables_importance = components_of_interest_table.apply(sum).sort_values()
+                variables_to_group = variables_importance[:self.subset_pca]
+                self.categorical_variables = list(set(list(variables_to_group.index) + self.categorical_variables))   
+                df = SeparatedDF(X, self.categorical_variables, self.ignore_dummies)
+
+                
             self.check = "I fitted the object, I swear"
-            self.obj.fit(df.X_numeric)
+            if self.obj.n_components > len(df.X_numeric.columns):
+                print("Number of components exceeds number of factors! Limiting it!")
+                self.obj.n_components = len(df.X_numeric.columns)            self.obj.fit(df.X_numeric)
             return self
 
         def transform(self, X, y = None):
-    #         print("You are here 2")
-    #         print(self.check)
-            df = SeparatedDF(X, self.categorical_variables)
-    #         print(df)
-    #         print(df.X_numeric)
+            df = SeparatedDF(X, self.categorical_variables, self.ignore_dummies)
             if hasattr(self.obj, "transform"):
                 fitted_df = self.obj.transform(df.X_numeric)
             elif hasattr(self.obj, "fit_transform"):
                 fitted_df = self.obj.fit_transform(df.X_numeric)
-    #         print(self.obj.__dict__)
 
             fitted_df = pd.DataFrame(fitted_df)
             if self.functionality == "imputer":
                 fitted_df.columns = df.X_numeric.columns
             elif self.functionality == "PCA":
                 if self.obj.n_components is None:
-    #                 print(df.X_numeric.columns)
                     self.obj.n_components = len(df.X_numeric.columns)
                 fitted_df.columns = [f"PC{i}" for i in range(1, self.obj.n_components +1)]
-    #         print(fitted_df)
             fitted_df = pd.concat([fitted_df, df.X_categorical], axis = 1)
-    #         print(df.X_categorical)
-    #         print(fitted_df)
+
             return fitted_df
     return ClassSeparated
 
+def find_dummies(X):
+    count_values = X.apply(lambda x: len(x.unique()), axis = 0)
+    dummy_mask = (X.apply(lambda x: len(x.unique()), axis = 0) <= 2)
+    dummy_columns = count_values[dummy_mask].index.tolist()
+    return dummy_columns
+
+
+class SeparatedDF():
+    def __init__(self, X, categorical_variables = [], ignore_dummies = False):
+
+        if (ignore_dummies == True):
+            categorical_variables = find_dummies(X) + categorical_variables
+
+        self.X_numeric = X.drop(categorical_variables, 1)
+        self.X_numeric = self.X_numeric.apply(pd.to_numeric)
+
+
+        self.X_categorical = X.copy()[categorical_variables]
 
 def assert_identical_results_separated(imputer_class_basic,
                                        imputer_class_modified,
@@ -269,3 +316,5 @@ class missing_filler_mode():
         non_categorical_table.fillna(non_categorical_table.mode().mean())
         
         return table_to_fill
+    
+    
