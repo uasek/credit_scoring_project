@@ -90,7 +90,7 @@ IterImp_module = teach_to_separate(IterativeImputer)
 # Scalers
 StandSc_module  = TransformerAdj(sklearn.preprocessing.StandardScaler, '_scl')
 MinMaxSc_module = TransformerAdj(sklearn.preprocessing.MinMaxScaler,   '_scl')
-StandSc_module  = TransformerAdj(sklearn.preprocessing.RobustScaler,   '_scl')
+RobustSc_module  = TransformerAdj(sklearn.preprocessing.RobustScaler,   '_scl') 
 
 WinsTrans_module = Winsorizer()
 LogTrans_module  = LogTransformer(base = '10')
@@ -239,11 +239,11 @@ def get_default_modules():
         # scalers
         'StandSc':     StandSc_module,
         'MinMax':      MinMaxSc_module,
-        'StandSc':     StandSc_module, 
+        'RobustSc':     RobustSc_module, 
         'WinsTrans':   WinsTrans_module,
         'LogTrans':    LogTrans_module ,
         'PwrTrans':    PwrTrans_module ,
-        'BxCxTrans':   BxCxTrans_module,
+        #'BxCxTrans':   BxCxTrans_module,
         'YeoJTrans':   YeoJTrans_module,
         
         # feature engineering
@@ -269,6 +269,17 @@ def get_default_modules():
 
 def get_set_params():
     return {
+        # StandSc does not need hyperparams
+        # RobustSc does not require any hyperparams
+        # MinMax does not need hyperparams
+        # Winsorizer
+        'fold':                           hp.quniform('fold',   low = 2, high = 4, q = 1),
+        # Log transformation
+        'base':                           hp.choice('base',   ['e', '10']),
+        # Power transformation 
+        'lambda':                         hp.quniform('lambda', low=2, high=11, q=1),
+        # YeoJohnsonTransformer - функция максимизирует единственный параметр, нет нужды его задавать
+        # WoE does not need hyperparams
         # OneHotEncoder does not need hyperparams
         # RecFeatAdd might be redefined to receive a correct estimator
         # PCA
@@ -326,7 +337,7 @@ def get_standard_pipe():
     pipe_params['cat_encoding'] = hp.choice('cat_encoding', ['OneHot', 'WoE'])
     pipe_params['missing_vals'] = hp.choice('missing_vals', ['skip', 'MeanImp', 'MedImp']) 
     pipe_params['imbalance']    = hp.choice('imbalance',    ['skip', 'RUS', 'ROS', 'SMOTE', 'ADASYN'])
-    pipe_params['scaler']       = hp.choice('scaler',       ['skip', 'StandSc', 'MinMax', 'StandSc', 'WinsTrans', 'LogTrans', 'PwrTrans',  'YeoJTrans']) # 'BxCxTrans',
+    pipe_params['scaler']       = hp.choice('scaler',       ['skip', 'StandSc', 'MinMax', 'RobustSc', 'WinsTrans', 'LogTrans', 'PwrTrans',  'YeoJTrans']) # 'BxCxTrans',
     pipe_params['feat_eng']     = hp.choice('feat_eng',     ['skip', 'PCA', 'kPCA', 'Isomap', 'UMAP']) 
     pipe_params['clusters']     = hp.choice('clusters',     ['skip', 'kmeans', 'mbatch_kmeans']) 
     pipe_params['feat_sel']     = hp.choice('feat_sel',     ['skip', 'SeqFearSel', 'RecFeatAdd'])  # , 'SmartSel'
@@ -339,7 +350,7 @@ def get_greedy_pipe():
     pipe_params['cat_encoding'] = hp.choice('cat_encoding', ['OneHot', 'WoE'])
     pipe_params['missing_vals'] = hp.choice('missing_vals', ['skip', 'MeanImp', 'MedImp', 'ModeImp', 'RandomImp', 'KNNImp', 'IterImp']) 
     pipe_params['imbalance']    = hp.choice('imbalance',    ['skip', 'RUS', 'ROS', 'SMOTE', 'ADASYN'])
-    pipe_params['scaler']       = hp.choice('scaler',       ['skip', 'StandSc', 'MinMax', 'StandSc', 'WinsTrans', 'LogTrans', 'PwrTrans',  'YeoJTrans']) # 'BxCxTrans',
+    pipe_params['scaler']       = hp.choice('scaler',       ['skip', 'StandSc', 'MinMax','RobustSc' ,'WinsTrans', 'LogTrans', 'PwrTrans',  'YeoJTrans']) # 'BxCxTrans'
     pipe_params['feat_eng']     = hp.choice('feat_eng',     ['skip', 'PCA', 'kPCA', 'Isomap', 'UMAP', 'CombWRef']) 
     pipe_params['clusters']     = hp.choice('clusters',     ['skip', 'kmeans', 'mbatch_kmeans', 'birch']) 
     pipe_params['feat_sel']     = hp.choice('feat_sel',     ['skip', 'SeqFearSel', 'RecFeatAdd']) # 'SelShuffl', 'SmartSel'
