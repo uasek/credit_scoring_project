@@ -74,6 +74,7 @@ class PipeHPOpt(object):
         if self.mode == 'kfold':
             kf = KFold(n_splits=self.n_folds, shuffle=True, random_state=self.seed)
             _k_idx = kf.split(X)
+            _k_idx = [[i, j] for [i, j] in _k_idx]
             _pipe_partial = partial(self._pipe, X=X, y=y, _k_idx=_k_idx, n_train=n_train, n_test=n_test)
         elif self.mode == 'valid':
             x_train, x_test, y_train, y_test = train_test_split(
