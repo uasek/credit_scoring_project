@@ -44,11 +44,10 @@ from imblearn.over_sampling import ADASYN
 from imblearn.under_sampling import RandomUnderSampler
 
 # feature selection
-from modules.feature_selection import CombineWithReferenceFeature_adj
+from modules.feature_selection import CombineWithReferenceFeature_adj, SafeSelectByShuffling
 from mlxtend.feature_selection import SequentialFeatureSelector
-from feature_engine.selection  import SelectByShuffling
-from feature_engine.selection  import RecursiveFeatureAddition
-from feature_engine.selection  import SmartCorrelatedSelection
+from feature_engine.selection  import SelectByShuffling, SelectBySingleFeaturePerformance
+from feature_engine.selection  import RecursiveFeatureAddition, SmartCorrelatedSelection
 
 # clustering as feature engineering method
 from modules.clusters import ClusterConstr
@@ -59,6 +58,7 @@ from modules.clusters import ClusterConstr
 from xgboost import XGBClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import LogisticRegression
 
 from sklearn.pipeline import Pipeline
 seed = 42
@@ -84,6 +84,7 @@ xgb_mdl = XGBClassifier(
     random_state = seed
 )
 
+logreg_mdl = LogisticRegression(penalty="none", max_iter=1000)
 
 # Encoders
 WoE_module = WoEEncoder_adj()
@@ -191,36 +192,46 @@ CombWRef_module = CombineWithReferenceFeature_adj(operations = ['mul'])
 
 
 # Feature selection
-SeqFearSel_module = SequentialFeatureSelector(
-    estimator  = xgb_mdl,  
-    # k_features = 5,                                                  
-    forward    = True,                                                  
-    floating   = True,                                                
+SeqFeatSel_module = SequentialFeatureSelector(  # very slow but seems to work
+    estimator  = xgb_mdl,  # base model
+    k_features = 5,      # number of features to select                                            
+    forward    = True,     # start from 0 features (True) or from all (False)               
+    floating   = True,     # whether to perform a backward step
     verbose    = 0,
     cv         = 5
 )
 
-RecFeatAdd_module = RecursiveFeatureAddition(
+RecFeatAdd_module = RecursiveFeatureAddition(  # rather slow
     xgb_mdl,
-    threshold = 0.005
-)
-
-SmartSel_module = SmartCorrelatedSelection(
-    # variables=X.columns.to_list(),
-    method="pearson",                # можно взять свою функцию
-    threshold=0.3,                   # порог корреляции
-    selection_method="variance",     # из коррелирующих групп выбираем признак с наиб дисперсией
-    estimator=None,                  # понадобится для selection_method="model_performance"        
+    variables=None,
+    threshold = 0.005,
     cv=5
 )
 
+SmartSel_module = SmartCorrelatedSelection(
+    variables=None,                  # If None, the transformer will evaluate all numerical variables in the dataset.  -- нужен класс.
+    method="pearson",                # can be replaced by a custom function
+    threshold=0.3,                   # correlation threshold
+    selection_method="variance",     # select feature with greatest variance from a correlated group
+    estimator=None,                  # for selection_method="model_performance"        
+    cv=5
+)
 
+# params from SelectByShuffling + min_features
+SelShuffl_module = SafeSelectByShuffling(
+    min_features=1,
+    variables=None,                   # If None, the transformer will shuffle all numerical variables in the dataset.
+    estimator=logreg_mdl,
+    scoring='roc_auc',
+    threshold=0.01,
+    cv=5
+)
 
-
-
-
-
-
+SinglePerf_module = SelectBySingleFeaturePerformance(  # rather slow
+    estimator=logreg_mdl,
+    scoring="roc_auc",
+    threshold=None,               # will be automatically set to the mean performance value of all features
+)
 
 # ---
 modules_dict =  {
@@ -260,7 +271,7 @@ modules_dict =  {
     
     # feature engineering
     'CombWRef':    CombWRef_module,
-    'RecFeatAdd':  RecFeatAdd_module,
+    # 'RecFeatAdd':  RecFeatAdd_module,
     
     # data imbalances
     'RUS':         RUS_module,      
@@ -269,11 +280,117 @@ modules_dict =  {
     'ADASYN':      ADASYN_module,
     
     # feature selection
-    'SeqFearSel':  SeqFearSel_module,
+    'SeqFeatSel':  SeqFeatSel_module,
     'RecFeatAdd':  RecFeatAdd_module,
     'SmartSel':    SmartSel_module,
-    # 'SelShuffl':   SelShuffl_module, 
+    'SelShuffl' :   SelShuffl_module,
+    'SinglePerf' : SinglePerf_module,
     
     # classifiers
     'xgb':        xgb_mdl
-    }
+}
+
+
+def get_params(trial, modules):
+    """
+    Analogue for get_set_params from hyperopt pipeline.
+
+    Parameters
+    ----------
+    trial : ...
+        Technical argument used by optuna
+    modules : array-like
+        Array with modules names used in pipeline.
+
+    Returns
+    -------
+    params : dict
+        Dict with params of the pipeline.
+    """
+
+    params = {}
+
+    if "PCA" in modules:
+        params.update({
+            'feat_eng_PCA__n_components'    : trial.suggest_int('feat_eng_PCA__n_components', 2, 11),
+            'feat_eng_PCA__whiten'          : trial.suggest_categorical('feat_eng_PCA__whiten', [True, False]),
+            'feat_eng_PCA__svd_solver'      : trial.suggest_categorical('feat_eng_PCA__svd_solver', ['full', 'arpack', 'auto', 'randomized'])
+        })
+
+    if "kPCA" in modules:
+        params.update({
+            'feat_eng_kPCA__n_components'   :  trial.suggest_int('feat_eng_kPCA__n_components', 5, 11),
+            'feat_eng_kPCA__kernel'         :  trial.suggest_categorical('feat_eng_kPCA__kernel', ['linear', 'poly', 'rbf', 'sigmoid', 'cosine', 'precomputed'])
+        })
+
+    if "Isomap" in modules:
+        params.update({
+            'feat_eng_Isomap__n_neighbors'  :   trial.suggest_int('feat_eng_Isomap__n_neighbors', 2, 5),
+            'feat_eng_Isomap__n_components' :   trial.suggest_int('feat_eng_Isomap__n_components', 2, 11),
+            'feat_eng_Isomap__path_method'  :   trial.suggest_categorical('feat_eng_Isomap__path_method',    ['auto', 'FW', 'D']),
+        })
+
+    if "UMAP" in modules:
+        params.update({
+        'feat_eng_UMAP__n_neighbors'        :   trial.suggest_int('feat_eng_UMAP__n_neighbors', 2, 11),
+        'feat_eng_UMAP__n_components'       :   trial.suggest_int('feat_eng_UMAP__n_components', 2, 11),
+        'feat_eng_UMAP__min_dist'           :   trial.suggest_uniform('feat_eng_UMAP__min_dist', .05, 1),
+        })
+
+    if "SeqFeatSel" in modules:
+        params.update({
+          "feat_sel_SeqFeatSel__estimator"    : trial.suggest_categorical("feat_sel_SeqFeatSel__estimator", [xgb_mdl, logreg_mdl]),
+          "feat_sel_SeqFeatSel__k_features"   : trial.suggest_int("feat_sel_SeqFeatSel__k_features", 3, 10),  # нужна классовая архитектура
+        #   "feat_sel_SeqFeatSel__forward"      : trial.suggest_categorical("feat_sel_SeqFeatSel__forward", [True, False]),
+          "feat_sel_SeqFeatSel__floating"     : trial.suggest_categorical("feat_sel_SeqFeatSel__floating",[True, False])
+        }) 
+
+    if "SmartSel" in modules:
+        params.update({
+          "feat_sel_SmartSel__method"           : trial.suggest_categorical("feat_sel_SmartSel__method", ["pearson", "spearman"]),
+          "feat_sel_SmartSel__threshold"        : trial.suggest_float("feat_sel_SmartSel__threshold", 0, 1),
+          "feat_sel_SmartSel__selection_method" : trial.suggest_categorical("feat_sel_SmartSel__selection_method", ["missing_values", "cardinality", "variance"])  # что значит cardinality
+        }) 
+
+    if "SelShuffl" in modules:
+        params.update({
+            "feat_sel_SelShuffl__estimator"      : trial.suggest_categorical("feat_sel_SelShuffl__estimator", [logreg_mdl, xgb_mdl]),
+            "feat_sel_SelShuffl__threshold"      : trial.suggest_float("feat_sel_SelShuffl__threshold", 0, 0.1)
+        }) 
+
+    if "RecFeatAdd" in modules:
+        params.update({
+            "feat_sel_RecFeatAdd__estimator"      : trial.suggest_categorical("feat_sel_RecFeatAdd__estimator", [logreg_mdl, xgb_mdl]),
+            "feat_sel_RecFeatAdd__threshold"      : trial.suggest_float("feat_sel_RecFeatAdd__threshold", 0, 1)
+        })
+
+    if "SinglePerf" in modules:
+        params.update({
+            "feat_sel_SinglePerf__estimator"      : trial.suggest_categorical("feat_sel_SinglePerf__estimator", [logreg_mdl, xgb_mdl]),
+            # "feat_sel_SinglePerf__threshold"      : trial.suggest_float("feat_sel_SinglePerf__threshold", 0.5, 1)  # uncomment after writing a wrapper
+        }) 
+
+    # if "lgbm" in modules:
+    #     params.update({
+    #     'boosting_learning_rate':            trial.suggest_uniform('boosting_learning_rate', .05, .31),
+    #     'boosting_num_leaves':               trial.suggest_int('boosting_num_leaves', 5, 32),
+    #     'boosting_reg_alpha':                trial.suggest_uniform('boosting_reg_alpha', 0, 16),
+    #     'boosting_reg_lambda':               trial.suggest_uniform('boosting_reg_lambda', 0, 16),
+    #     'boosting_n_estimators':             100
+    #     })
+
+    if "xgb" in modules:
+        params.update({
+            "boosting_xgb__n_estimators"     : trial.suggest_int("boosting_xgb__n_estimators", 100, 1000),
+            "boosting_xgb__max_depth"        : 2 ** trial.suggest_int("boosting_xgb__max_depth", 1, 4),
+            "boosting_xgb__learning_rate"    : trial.suggest_uniform("boosting_xgb__learning_rate", .05, .31),
+            "boosting_xgb__reg_alpha"        : trial.suggest_uniform("boosting_xgb__reg_alpha", 0, 16),
+            "boosting_xgb__reg_lambda"       : trial.suggest_uniform("boosting_xgb__reg_lambda", 0, 16)
+        })
+
+    return params
+
+    # if "DimRed__PCA" in modules:
+    #     params.update({
+            
+    #     }) 
