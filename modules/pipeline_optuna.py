@@ -1,134 +1,54 @@
 # imports
 import numpy as np
 from sklearn.pipeline import Pipeline
+
 # import optuna
 from collections import OrderedDict
-
-from modules.defaults_optuna import modules_dict
-
-
-def get_params(trial, modules):
-    """
-    Analogue for get_set_params from hyperopt pipeline
-
-    Parameters
-    ----------
-    trial : ...
-        Technical argument used by optuna
-    modules : array-like
-        Array with modules names used in pipeline.
-
-    Returns
-    -------
-    params : dict
-        Dict with params of the pipeline.
-    """
-
-    params = {}
-
-    if "PCA" in modules:
-        params.update({
-            'feat_eng_PCA__n_components'    : trial.suggest_int('feat_eng_PCA__n_components', 2, 11),
-            'feat_eng_PCA__whiten'          : trial.suggest_categorical('feat_eng_PCA__whiten', [True, False]),
-            'feat_eng_PCA__svd_solver'      : trial.suggest_categorical('feat_eng_PCA__svd_solver', ['full', 'arpack', 'auto', 'randomized'])
-        })
-
-    if "kPCA" in modules:
-        params.update({
-            'feat_eng_kPCA__n_components'   :  trial.suggest_int('feat_eng_kPCA__n_components', 5, 11),
-            'feat_eng_kPCA__kernel'         :  trial.suggest_categorical('feat_eng_kPCA__kernel', ['linear', 'poly', 'rbf', 'sigmoid', 'cosine', 'precomputed'])
-        })
-
-    if "Isomap" in modules:
-        params.update({
-            'feat_eng_Isomap__n_neighbors'  :   trial.suggest_int('feat_eng_Isomap__n_neighbors', 2, 5),
-            'feat_eng_Isomap__n_components' :   trial.suggest_int('feat_eng_Isomap__n_components', 2, 11),
-            'feat_eng_Isomap__path_method'  :   trial.choice('feat_eng_Isomap__path_method',    ['auto', 'FW', 'D']),
-        })
-
-    if "UMAP" in modules:
-        params.update({
-        'feat_eng_UMAP__n_neighbors'        :   trial.suggest_int('feat_eng_UMAP__n_neighbors', 2, 11),
-        'feat_eng_UMAP__n_components'       :   trial.suggest_int('feat_eng_UMAP__n_components', 2, 11),
-        'feat_eng_UMAP__min_dist'           :   trial.suggest_uniform('feat_eng_UMAP__min_dist', .05, 1),
-        })
-
-    # if "lgbm" in modules:
-    #     params.update({
-    #     'boosting_learning_rate':            trial.suggest_uniform('boosting_learning_rate', .05, .31),
-    #     'boosting_num_leaves':               trial.suggest_int('boosting_num_leaves', 5, 32),
-    #     'boosting_reg_alpha':                trial.suggest_uniform('boosting_reg_alpha', 0, 16),
-    #     'boosting_reg_lambda':               trial.suggest_uniform('boosting_reg_lambda', 0, 16),
-    #     'boosting_n_estimators':             100
-    #     })
-
-    if "xgb" in modules:
-        params.update({
-            "boosting_xgb__n_estimators"     : trial.suggest_int("boosting_xgb__n_estimators", 100, 1000),
-            "boosting_xgb__max_depth"        : 2 ** trial.suggest_int("boosting_xgb__max_depth", 1, 4),
-            "boosting_xgb__learning_rate"    : trial.suggest_uniform("boosting_xgb__learning_rate", .05, .31),
-            "boosting_xgb__reg_alpha"        : trial.suggest_uniform("boosting_xgb__reg_alpha", 0, 16),
-            "boosting_xgb__reg_lambda"       : trial.suggest_uniform("boosting_xgb__reg_lambda", 0, 16)
-        })
-
-    return params
-
-    # if "DimRed__PCA" in modules:
-    #     params.update({
-            
-    #     })
+from modules.defaults_optuna import modules_dict, get_params
 
 
 def get_fast_pipe(trial):
+    """Works."""
 
     pipe_params = OrderedDict()
     pipe_params['cat_encoding'] = trial.suggest_categorical('cat_encoding', ['OneHot', 'WoE'])
     pipe_params['missing_vals'] = trial.suggest_categorical('missing_vals', ['passthrough', 'MeanImp', 'MedImp']) 
     # pipe_params['imbalance']    = trial.suggest_categorical('imbalance',    ['passthrough', 'RUS', 'ROS'])
     pipe_params['feat_eng']     = trial.suggest_categorical('feat_eng',     ['passthrough', 'PCA']) # , 'kPCA'
-    pipe_params['feat_sel']     = trial.suggest_categorical('feat_sel',     ['passthrough', 'SmartSel']) 
+    # pipe_params['feat_sel']     = trial.suggest_categorical('feat_sel',     ['passthrough', 'SmartSel', 'SelShuffl'])
+    # pipe_params['feat_sel']     = trial.suggest_categorical('feat_sel',     ['passthrough', 'SmartSel', 'SelShuffl', 'RecFeatAdd', 'SinglePerf'])  # 'SeqFeatSel'
+    pipe_params['feat_sel']     = trial.suggest_categorical('feat_sel',     ['passthrough', 'SeqFeatSel', 'RecFeatAdd', 'SelShuffl', 'SmartSel'])
     pipe_params['boosting']     = 'xgb'
 
     return pipe_params
     
 def get_standard_pipe(trial):
-    """
-    Аналог get_standard_pipe из пайплайна для hyperopt.
-
-    Parameters
-    ----------
-    trial : ...
-        Технический аргумент, используемый оптуной.
-
-    Returns
-    -------
-    pipe_params : OrderedDict
-        Словарь с элементами пайплайна
-    """
+    """Thows error."""
 
     pipe_params = OrderedDict()
     pipe_params['cat_encoding'] = trial.suggest_categorical('cat_encoding', ['OneHot', 'WoE'])
     pipe_params['missing_vals'] = trial.suggest_categorical('missing_vals', ['passthrough', 'MeanImp', 'MedImp']) 
     # pipe_params['imbalance']    = trial.suggest_categorical('imbalance',    ['passthrough', 'RUS', 'ROS', 'SMOTE', 'ADASYN'])
     pipe_params['scaler']       = trial.suggest_categorical('scaler',       ['passthrough', 'StandSc', 'MinMax', 'StandSc', 'WinsTrans', 'LogTrans', 'PwrTrans',  'YeoJTrans']) # 'BxCxTrans',
-    pipe_params['feat_eng']     = trial.suggest_categorical('feat_eng',     ['passthrough', 'PCA', 'Isomap', 'UMAP']) # , 'kPCA' 
+    pipe_params['feat_eng']     = trial.suggest_categorical('feat_eng',     ['passthrough', 'PCA', 'Isomap',]) # , 'kPCA', 'UMAP'
     pipe_params['clusters']     = trial.suggest_categorical('clusters',     ['passthrough', 'kmeans', 'mbatch_kmeans']) 
-    pipe_params['feat_sel']     = trial.suggest_categorical('feat_sel',     ['passthrough', 'SeqFearSel', 'RecFeatAdd'])  # , 'SmartSel'
+    pipe_params['feat_sel']     = trial.suggest_categorical('feat_sel',     ['passthrough', 'SmartSel', 'SelShuffl', 'RecFeatAdd', 'SinglePerf'])  # 'SeqFeatSel'
     pipe_params['boosting']     = 'xgb'
 
     return pipe_params
 
 
 def get_greedy_pipe(trial):
+    """Not tested yet."""
 
     pipe_params = OrderedDict()
     pipe_params['cat_encoding'] = trial.suggest_categorical('cat_encoding', ['OneHot', 'WoE'])
     pipe_params['missing_vals'] = trial.suggest_categorical('missing_vals', ['passthrough', 'MeanImp', 'MedImp', 'ModeImp', 'RandomImp', 'KNNImp', 'IterImp']) 
     # pipe_params['imbalance']    = trial.suggest_categorical('imbalance',    ['passthrough', 'RUS', 'ROS', 'SMOTE', 'ADASYN'])
     pipe_params['scaler']       = trial.suggest_categorical('scaler',       ['passthrough', 'StandSc', 'MinMax','StandSc' ,'WinsTrans', 'LogTrans', 'PwrTrans',  'YeoJTrans']) # 'BxCxTrans'
-    pipe_params['feat_eng']     = trial.suggest_categorical('feat_eng',     ['passthrough', 'PCA', 'Isomap', 'UMAP', 'CombWRef']) # , 'kPCA' 
+    pipe_params['feat_eng']     = trial.suggest_categorical('feat_eng',     ['passthrough', 'PCA', 'Isomap', 'CombWRef']) # , 'kPCA', 'UMAP'
     pipe_params['clusters']     = trial.suggest_categorical('clusters',     ['passthrough', 'kmeans', 'mbatch_kmeans', 'birch']) 
-    pipe_params['feat_sel']     = trial.suggest_categorical('feat_sel',     ['passthrough', 'SeqFearSel', 'RecFeatAdd']) # 'SelShuffl', 'SmartSel'
+    pipe_params['feat_sel']     = trial.suggest_categorical('feat_sel',     ['passthrough', 'SeqFeatSel', 'RecFeatAdd', 'SelShuffl', 'SmartSel'])
     pipe_params['boosting']     = 'xgb'
 
     return pipe_params
@@ -136,7 +56,7 @@ def get_greedy_pipe(trial):
 
 def get_model(trial, mode='fast'):
     """
-    Аналог get_space из пайплайна для hyperopt.
+    Analogue for get_space from hyperopt pipeline.
 
     Parameters
     ----------
