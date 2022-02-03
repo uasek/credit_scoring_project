@@ -44,7 +44,7 @@ from imblearn.over_sampling import ADASYN
 from imblearn.under_sampling import RandomUnderSampler
 
 # feature selection
-from modules.feature_selection import CombineWithReferenceFeature_adj, SafeSelectByShuffling
+from modules.feature_selection import CombineWithReferenceFeature_adj, SafeSelectByShuffling, SafeSelectBySingleFeaturePerformance
 from mlxtend.feature_selection import SequentialFeatureSelector
 from feature_engine.selection  import SelectByShuffling, SelectBySingleFeaturePerformance
 from feature_engine.selection  import RecursiveFeatureAddition, SmartCorrelatedSelection
@@ -219,7 +219,6 @@ SmartSel_module = SmartCorrelatedSelection(
 
 # params from SelectByShuffling + min_features
 SelShuffl_module = SafeSelectByShuffling(
-    min_features=1,
     variables=None,                   # If None, the transformer will shuffle all numerical variables in the dataset.
     estimator=logreg_mdl,
     scoring='roc_auc',
@@ -227,7 +226,7 @@ SelShuffl_module = SafeSelectByShuffling(
     cv=5
 )
 
-SinglePerf_module = SelectBySingleFeaturePerformance(  # rather slow
+SinglePerf_module = SafeSelectBySingleFeaturePerformance(  # rather slow
     estimator=logreg_mdl,
     scoring="roc_auc",
     threshold=None,               # will be automatically set to the mean performance value of all features
@@ -367,7 +366,7 @@ def get_params(trial, modules):
     if "SinglePerf" in modules:
         params.update({
             "feat_sel_SinglePerf__estimator"      : trial.suggest_categorical("feat_sel_SinglePerf__estimator", [logreg_mdl, xgb_mdl]),
-            # "feat_sel_SinglePerf__threshold"      : trial.suggest_float("feat_sel_SinglePerf__threshold", 0.5, 1)  # uncomment after writing a wrapper
+            "feat_sel_SinglePerf__threshold"      : trial.suggest_float("feat_sel_SinglePerf__threshold", 0.5, 1)
         }) 
 
     # if "lgbm" in modules:

@@ -15,9 +15,8 @@ def get_fast_pipe(trial):
     pipe_params['missing_vals'] = trial.suggest_categorical('missing_vals', ['passthrough', 'MeanImp', 'MedImp']) 
     # pipe_params['imbalance']    = trial.suggest_categorical('imbalance',    ['passthrough', 'RUS', 'ROS'])
     pipe_params['feat_eng']     = trial.suggest_categorical('feat_eng',     ['passthrough', 'PCA']) # , 'kPCA'
-    # pipe_params['feat_sel']     = trial.suggest_categorical('feat_sel',     ['passthrough', 'SmartSel', 'SelShuffl'])
+    pipe_params['feat_sel']     = trial.suggest_categorical('feat_sel',     ['passthrough', 'SmartSel', 'SelShuffl'])
     # pipe_params['feat_sel']     = trial.suggest_categorical('feat_sel',     ['passthrough', 'SmartSel', 'SelShuffl', 'RecFeatAdd', 'SinglePerf'])  # 'SeqFeatSel'
-    pipe_params['feat_sel']     = trial.suggest_categorical('feat_sel',     ['passthrough', 'SeqFeatSel', 'RecFeatAdd', 'SelShuffl', 'SmartSel'])
     pipe_params['boosting']     = 'xgb'
 
     return pipe_params
