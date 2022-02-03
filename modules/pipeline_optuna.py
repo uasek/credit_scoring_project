@@ -118,7 +118,7 @@ def optimized_function(trial, mode, loss, strategy, *, X_train=None, X_val=None,
              and kf is not None, "Not enough arguments for strategy='kfold'"
 
         losses = []
-        for train_index, test_index in kf:
+        for train_index, test_index in kf.split(X):
             X_split_train, X_split_test = X.iloc[train_index, :], X.iloc[test_index, :]
             y_split_train, y_split_test = y.iloc[train_index],  y.iloc[test_index]
 
