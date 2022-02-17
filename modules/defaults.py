@@ -298,6 +298,14 @@ def get_set_params():
         # WoE does not need hyperparams
         # OneHotEncoder does not need hyperparams
         # RecFeatAdd might be redefined to receive a correct estimator
+        
+        #Missings
+        #MeanImp, MedImp, RandomImp do not need hyperparameters
+        'Missing__KNNImp_n_neighbours':      hp.quniform('Missing__KNNImp_n_neighbours', low=1, high=10, q=2),
+        'Missing__KNNImp_weights':      hp.choice('Missing__KNNImp_weights', ["uniform", "distance"]),
+        'Missing__IterImp_n_neighbours':      hp.quniform('Missing__IterImp_n_neighbours', low=5, high=30, q=5),
+        'Missing__IterImp_n_nearest_features':      hp.quniform('Missing__IterImp_n_nearest_features', low=1, high=5, q=1),
+        'Missing__IterImp_tol':      hp.choice('Missing__IterImp_n_tol', [10**(-3), 10**(-2), 5*10**(-2), 10**(-1)]),
         # PCA
         # 'DimRed__PCA__n_components':      hp.choice('PCA__n_components',      np.arange(2, 11)),
         'DimRed__PCA__n_components':      hp.quniform('DimRed__PCA__n_components', low=2, high=11, q=1),
