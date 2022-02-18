@@ -298,6 +298,11 @@ def get_set_params():
         # WoE does not need hyperparams
         # OneHotEncoder does not need hyperparams
         # RecFeatAdd might be redefined to receive a correct estimator
+
+        # Imbalances in target
+        # TODO: add correct parameter naming
+        # "imbalance_SMOTE__k_neighbors"       : hp.randint("imbalance_SMOTE__k_neighbors",  9) + 1,
+        # "imbalance_ADASYN__n_neighbors"      : hp.randint("imbalance_ADASYN__n_neighbors", 9) + 1,  # параметр одинаковый, в двух алгоритмах называется по-разному :))   
         
         #Missings
         #MeanImp, MedImp, RandomImp do not need hyperparameters
