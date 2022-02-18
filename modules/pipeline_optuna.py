@@ -17,7 +17,7 @@ def get_fast_pipe(trial):
     pipe_params['feat_eng']     = trial.suggest_categorical('feat_eng',     ['passthrough', 'PCA']) # , 'kPCA'
     pipe_params['feat_sel']     = trial.suggest_categorical('feat_sel',     ['passthrough', 'SmartSel', 'SelShuffl'])
     # pipe_params['feat_sel']     = trial.suggest_categorical('feat_sel',     ['passthrough', 'SmartSel', 'SelShuffl', 'RecFeatAdd', 'SinglePerf'])  # 'SeqFeatSel'
-    pipe_params['boosting']     = 'xgb'
+    pipe_params['boosting']     = 'lgbm'
 
     return pipe_params
     
@@ -32,7 +32,7 @@ def get_standard_pipe(trial):
     pipe_params['feat_eng']     = trial.suggest_categorical('feat_eng',     ['passthrough', 'PCA', 'Isomap',]) # , 'kPCA', 'UMAP'
     pipe_params['clusters']     = trial.suggest_categorical('clusters',     ['passthrough', 'kmeans', 'mbatch_kmeans']) 
     pipe_params['feat_sel']     = trial.suggest_categorical('feat_sel',     ['passthrough', 'SmartSel', 'SelShuffl', 'RecFeatAdd', 'SinglePerf'])  # 'SeqFeatSel'
-    pipe_params['boosting']     = 'xgb'
+    pipe_params['boosting']     = 'lgbm'
 
     return pipe_params
 
@@ -48,7 +48,7 @@ def get_greedy_pipe(trial):
     pipe_params['feat_eng']     = trial.suggest_categorical('feat_eng',     ['passthrough', 'PCA', 'Isomap', 'CombWRef']) # , 'kPCA', 'UMAP'
     pipe_params['clusters']     = trial.suggest_categorical('clusters',     ['passthrough', 'kmeans', 'mbatch_kmeans', 'birch']) 
     pipe_params['feat_sel']     = trial.suggest_categorical('feat_sel',     ['passthrough', 'SeqFeatSel', 'RecFeatAdd', 'SelShuffl', 'SmartSel'])
-    pipe_params['boosting']     = 'xgb'
+    pipe_params['boosting']     = 'lgbm'
 
     return pipe_params
 

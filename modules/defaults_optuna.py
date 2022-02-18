@@ -2,7 +2,7 @@
 import numpy as np
 import sklearn
 from collections import OrderedDict
-## from hyperopt import hp
+# from hyperopt import hp
 
 # import umap
 ## import umap.umap_ as umap
@@ -53,9 +53,9 @@ from feature_engine.selection  import RecursiveFeatureAddition, SmartCorrelatedS
 from modules.clusters import ClusterConstr
 
 # classifiers
-# from catboost import CatBoostClassifier
-# from lightgbm import LGBMClassifier
-from xgboost import XGBClassifier
+# from catboost import CatBoostClassifier  # пока вообще не поддерживается
+from lightgbm import LGBMClassifier
+# from xgboost import XGBClassifier  # кажется, вообще не будет нужен
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import LogisticRegression
@@ -67,22 +67,21 @@ seed = 42
 ## CLASS DECLARATIONS
 # Classifiers
 
-# пока не встает на мак :)))
-# lgbm_mdl = LGBMClassifier(
-#     num_leaves = 10,
-#     learning_rate = .1,
-#     reg_alpha = 8,
-#     reg_lambda = 8,
-#     random_state = seed
-# )
-
-xgb_mdl = XGBClassifier(
-    eval_metric="logloss",  # set expicitly to avoid warnings
+lgbm_mdl = LGBMClassifier(
+    num_leaves = 10,
     learning_rate = .1,
     reg_alpha = 8,
     reg_lambda = 8,
     random_state = seed
 )
+
+# xgb_mdl = XGBClassifier(
+#     eval_metric="logloss",  # set expicitly to avoid warnings
+#     learning_rate = .1,
+#     reg_alpha = 8,
+#     reg_lambda = 8,
+#     random_state = seed
+# )
 
 logreg_mdl = LogisticRegression(penalty="none", max_iter=1000)
 
@@ -193,8 +192,8 @@ CombWRef_module = CombineWithReferenceFeature_adj(operations = ['mul'])
 
 # Feature selection
 SeqFeatSel_module = SequentialFeatureSelector(  # very slow but seems to work
-    estimator  = xgb_mdl,  # base model
-    k_features = 5,      # number of features to select                                            
+    estimator  = lgbm_mdl,  # base model
+    k_features = 5,        # number of features to select                                            
     forward    = True,     # start from 0 features (True) or from all (False)               
     floating   = True,     # whether to perform a backward step
     verbose    = 0,
@@ -202,7 +201,7 @@ SeqFeatSel_module = SequentialFeatureSelector(  # very slow but seems to work
 )
 
 RecFeatAdd_module = RecursiveFeatureAddition(  # rather slow
-    xgb_mdl,
+    lgbm_mdl,
     variables=None,
     threshold = 0.005,
     cv=5
@@ -286,7 +285,8 @@ modules_dict =  {
     'SinglePerf' : SinglePerf_module,
     
     # classifiers
-    'xgb':        xgb_mdl
+    # 'xgb':        xgb_mdl
+    'lgbm' : lgbm_mdl
 }
 
 
@@ -338,7 +338,7 @@ def get_params(trial, modules):
 
     if "SeqFeatSel" in modules:
         params.update({
-          "feat_sel_SeqFeatSel__estimator"    : trial.suggest_categorical("feat_sel_SeqFeatSel__estimator", [xgb_mdl, logreg_mdl]),
+          "feat_sel_SeqFeatSel__estimator"    : trial.suggest_categorical("feat_sel_SeqFeatSel__estimator", [lgbm_mdl, logreg_mdl]),
           "feat_sel_SeqFeatSel__k_features"   : trial.suggest_int("feat_sel_SeqFeatSel__k_features", 3, 10),  # нужна классовая архитектура
         #   "feat_sel_SeqFeatSel__forward"      : trial.suggest_categorical("feat_sel_SeqFeatSel__forward", [True, False]),
           "feat_sel_SeqFeatSel__floating"     : trial.suggest_categorical("feat_sel_SeqFeatSel__floating",[True, False])
@@ -353,39 +353,39 @@ def get_params(trial, modules):
 
     if "SelShuffl" in modules:
         params.update({
-            "feat_sel_SelShuffl__estimator"      : trial.suggest_categorical("feat_sel_SelShuffl__estimator", [logreg_mdl, xgb_mdl]),
+            "feat_sel_SelShuffl__estimator"      : trial.suggest_categorical("feat_sel_SelShuffl__estimator", [logreg_mdl, lgbm_mdl]),
             "feat_sel_SelShuffl__threshold"      : trial.suggest_float("feat_sel_SelShuffl__threshold", 0, 0.1)
         }) 
 
     if "RecFeatAdd" in modules:
         params.update({
-            "feat_sel_RecFeatAdd__estimator"      : trial.suggest_categorical("feat_sel_RecFeatAdd__estimator", [logreg_mdl, xgb_mdl]),
+            "feat_sel_RecFeatAdd__estimator"      : trial.suggest_categorical("feat_sel_RecFeatAdd__estimator", [logreg_mdl, lgbm_mdl]),
             "feat_sel_RecFeatAdd__threshold"      : trial.suggest_float("feat_sel_RecFeatAdd__threshold", 0, 1)
         })
 
     if "SinglePerf" in modules:
         params.update({
-            "feat_sel_SinglePerf__estimator"      : trial.suggest_categorical("feat_sel_SinglePerf__estimator", [logreg_mdl, xgb_mdl]),
+            "feat_sel_SinglePerf__estimator"      : trial.suggest_categorical("feat_sel_SinglePerf__estimator", [logreg_mdl, lgbm_mdl]),
             "feat_sel_SinglePerf__threshold"      : trial.suggest_float("feat_sel_SinglePerf__threshold", 0.5, 1)
         }) 
 
-    # if "lgbm" in modules:
-    #     params.update({
-    #     'boosting_learning_rate':            trial.suggest_uniform('boosting_learning_rate', .05, .31),
-    #     'boosting_num_leaves':               trial.suggest_int('boosting_num_leaves', 5, 32),
-    #     'boosting_reg_alpha':                trial.suggest_uniform('boosting_reg_alpha', 0, 16),
-    #     'boosting_reg_lambda':               trial.suggest_uniform('boosting_reg_lambda', 0, 16),
-    #     'boosting_n_estimators':             100
-    #     })
-
-    if "xgb" in modules:
+    if "lgbm" in modules:
         params.update({
-            "boosting_xgb__n_estimators"     : trial.suggest_int("boosting_xgb__n_estimators", 100, 1000),
-            "boosting_xgb__max_depth"        : 2 ** trial.suggest_int("boosting_xgb__max_depth", 1, 4),
-            "boosting_xgb__learning_rate"    : trial.suggest_uniform("boosting_xgb__learning_rate", .05, .31),
-            "boosting_xgb__reg_alpha"        : trial.suggest_uniform("boosting_xgb__reg_alpha", 0, 16),
-            "boosting_xgb__reg_lambda"       : trial.suggest_uniform("boosting_xgb__reg_lambda", 0, 16)
+        'boosting_lgbm__learning_rate':            trial.suggest_uniform('boosting_lgbm__learning_rate', .05, .31),
+        'boosting_lgbm__num_leaves':               trial.suggest_int('boosting_lgbm__num_leaves', 5, 32),
+        'boosting_lgbm__reg_alpha':                trial.suggest_uniform('boosting_lgbm__reg_alpha', 0, 16),
+        'boosting_lgbm__reg_lambda':               trial.suggest_uniform('boosting_lgbm__reg_lambda', 0, 16),
+        'boosting_lgbm__n_estimators':             100
         })
+
+    # if "xgb" in modules:
+    #     params.update({
+    #         "boosting_xgb__n_estimators"     : trial.suggest_int("boosting_xgb__n_estimators", 100, 1000),
+    #         "boosting_xgb__max_depth"        : 2 ** trial.suggest_int("boosting_xgb__max_depth", 1, 4),
+    #         "boosting_xgb__learning_rate"    : trial.suggest_uniform("boosting_xgb__learning_rate", .05, .31),
+    #         "boosting_xgb__reg_alpha"        : trial.suggest_uniform("boosting_xgb__reg_alpha", 0, 16),
+    #         "boosting_xgb__reg_lambda"       : trial.suggest_uniform("boosting_xgb__reg_lambda", 0, 16)
+    #     })
 
     return params
 
