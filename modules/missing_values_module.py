@@ -2,7 +2,32 @@
 
 import numpy as np
 import pandas as pd
-import feature_filters as filters
+
+def create_test_df(nans = True):
+    x1 = np.random.normal(size = 10000)
+    x2 = np.random.normal(size = 10000)*x1
+    x3 = np.random.normal(size = 10000) + x2
+    if nans == True:
+        x4 = np.random.choice(a = [1, 0], size = 10000)
+        xcat = np.random.choice(a = ["a", "b", "c", "d", None], size = 10000)
+    else:
+        x4 = np.random.choice(a = [1], size = 10000)
+        xcat = np.random.choice(a = ["a", "b", "c", "d", "e"], size = 10000)
+    target = np.random.choice(a = [0,1], size = 10000)
+    x5 = np.random.normal(size = 10000)
+
+    test_df = pd.DataFrame({"x1" : x1,
+                           "x2" : x2,
+                           "x3" : x3,
+                           "x4" : x4,
+                            "xcat" : xcat,
+                            "target" : target
+                           } )
+    
+    test_df.x4 = np.where(test_df.x4 == 1, x5, None)
+    return test_df
+
+import modules.feature_filters as filters
 
 def create_test_df(nans = True):
     x1 = np.random.normal(size = 10000)
@@ -94,7 +119,6 @@ def teach_to_separate(parent_class):
                 self.categorical_variables = list(set(Filter.correlated_names + self.categorical_variables))
 
             df = SeparatedDF(X, self.categorical_variables, self.ignore_dummies)
-                
             if self.subset_pca > 0:
                 
                 names = df.X_numeric.columns
@@ -116,15 +140,16 @@ def teach_to_separate(parent_class):
                 self.categorical_variables = list(set(list(variables_to_group.index) + self.categorical_variables))   
                 df = SeparatedDF(X, self.categorical_variables, self.ignore_dummies)
 
-                
+            self.categorical_variables = set(self.categorical_variables + find_dummies(X))
             self.check = "I fitted the object, I swear"
             if self.obj.n_components > len(df.X_numeric.columns):
                 print("Number of components exceeds number of factors! Limiting it!")
-                self.obj.n_components = len(df.X_numeric.columns)            self.obj.fit(df.X_numeric)
+                self.obj.n_components = len(df.X_numeric.columns)
+                self.obj.fit(df.X_numeric)
             return self
 
         def transform(self, X, y = None):
-            df = SeparatedDF(X, self.categorical_variables, self.ignore_dummies)
+            df = SeparatedDF(X, self.categorical_variables)
             if hasattr(self.obj, "transform"):
                 fitted_df = self.obj.transform(df.X_numeric)
             elif hasattr(self.obj, "fit_transform"):
@@ -140,6 +165,7 @@ def teach_to_separate(parent_class):
             fitted_df = pd.concat([fitted_df, df.X_categorical], axis = 1)
 
             return fitted_df
+        
     return ClassSeparated
 
 def find_dummies(X):
@@ -316,5 +342,3 @@ class missing_filler_mode():
         non_categorical_table.fillna(non_categorical_table.mode().mean())
         
         return table_to_fill
-    
-    
