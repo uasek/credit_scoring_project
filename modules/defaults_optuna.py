@@ -60,8 +60,10 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import LogisticRegression
 
-from sklearn.pipeline import Pipeline
 seed = 42
+
+# ###---####
+# add some variables corresponding to the dataset instead of making classes
 
 
 ## CLASS DECLARATIONS
@@ -180,10 +182,10 @@ CombWRef_module = CombineWithReferenceFeature_adj(
 
 
 # Imbalances in target
-RUS_module    = RandomUnderSampler(random_state = seed)
-ROS_module    = RandomOverSampler(random_state = seed)
-SMOTE_module  = SMOTE(random_state = seed)
-ADASYN_module = ADASYN(random_state = seed)
+RUS_module    = RandomUnderSampler(random_state=seed)  # default behavior
+ROS_module    = RandomOverSampler(random_state=seed)   # for all algorithms
+SMOTE_module  = SMOTE(random_state=seed, n_jobs=-1)    # is to equalize
+ADASYN_module = ADASYN(random_state=seed)              # the two classes
 
 
 # Feature Engineering
@@ -271,7 +273,7 @@ modules_dict =  {
     'CombWRef':    CombWRef_module,
     # 'RecFeatAdd':  RecFeatAdd_module,
     
-    # data imbalances
+    # Imbalances in target
     'RUS':         RUS_module,      
     'ROS':         ROS_module,      
     'SMOTE':       SMOTE_module,  
@@ -346,9 +348,33 @@ def get_params(trial, modules):
 
     if "UMAP" in modules:
         params.update({
-        'feat_eng_UMAP__n_neighbors'        :   trial.suggest_int('feat_eng_UMAP__n_neighbors', 2, 11),
-        'feat_eng_UMAP__n_components'       :   trial.suggest_int('feat_eng_UMAP__n_components', 2, 11),
-        'feat_eng_UMAP__min_dist'           :   trial.suggest_uniform('feat_eng_UMAP__min_dist', .05, 1),
+            'feat_eng_UMAP__n_neighbors'    :   trial.suggest_int('feat_eng_UMAP__n_neighbors', 2, 11),
+            'feat_eng_UMAP__n_components'   :   trial.suggest_int('feat_eng_UMAP__n_components', 2, 11),
+            'feat_eng_UMAP__min_dist'       :   trial.suggest_uniform('feat_eng_UMAP__min_dist', .05, 1),
+        })
+
+    # Imbalances in target
+    # float sampling_strategy depends on balance in classes for each dataset
+    # if "RUS" in modules:
+    #     params.update({
+    #         "imbalance_RUS__sampling_strategy" : trial.suggest_uniform("imbalance_RUS__sampling_strategy",  0, 0.5)
+    #     })
+
+    # if "ROS" in modules:
+    #     params.update({
+    #         "imbalance_ROS__sampling_strategy" : trial.suggest_uniform("imbalance_ROS__sampling_strategy",  0, 0.5)
+    #     })
+
+    if "SMOTE" in modules:
+        params.update({
+            # "imbalance_SMOTE__sampling_strategy" : trial.suggest_uniform("imbalance_SMOTE__sampling_strategy",  0, 0.5),
+            "imbalance_SMOTE__k_neighbors"       : trial.suggest_int("imbalance_SMOTE__k_neighbors",  1, 10)
+        })
+
+    if "ADASYN" in modules:
+        params.update({
+            # "imbalance_ADASYN__sampling_strategy" : trial.suggest_uniform("imbalance_ADASYN__sampling_strategy",  0, 0.5),
+            "imbalance_ADASYN__n_neighbors"       : trial.suggest_int("imbalance_ADASYN__n_neighbors",  1, 10)
         })
 
     # Feature selection

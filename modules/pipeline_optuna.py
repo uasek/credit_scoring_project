@@ -1,6 +1,7 @@
 # imports
 import numpy as np
-from sklearn.pipeline import Pipeline
+# from sklearn.pipeline import Pipeline
+from imblearn.pipeline import Pipeline
 
 # import optuna
 from collections import OrderedDict
@@ -13,10 +14,10 @@ def get_fast_pipe(trial):
     pipe_params = OrderedDict()
     pipe_params['cat_encoding'] = trial.suggest_categorical('cat_encoding', ['OneHot', 'WoE'])
     pipe_params['missing_vals'] = trial.suggest_categorical('missing_vals', ['passthrough', 'MeanImp', 'MedImp']) 
-    # pipe_params['imbalance']    = trial.suggest_categorical('imbalance',    ['passthrough', 'RUS', 'ROS'])
+    pipe_params['imbalance']    = trial.suggest_categorical('imbalance',    ['passthrough', 'RUS', 'ROS'])
+    # pipe_params['imbalance']    = trial.suggest_categorical('imbalance',    ['passthrough', 'RUS', 'ROS', 'SMOTE', 'ADASYN'])  # comment before commit
     pipe_params['feat_eng']     = trial.suggest_categorical('feat_eng',     ['passthrough', 'PCA']) # , 'kPCA'
-    pipe_params['feat_sel']     = trial.suggest_categorical('feat_sel',     ['passthrough', 'SmartSel', 'SelShuffl'])
-    # pipe_params['feat_sel']     = trial.suggest_categorical('feat_sel',     ['passthrough', 'SmartSel', 'SelShuffl', 'RecFeatAdd', 'SinglePerf'])  # 'SeqFeatSel'
+    pipe_params['feat_sel']     = trial.suggest_categorical('feat_sel',     ['passthrough', 'SmartSel'])  # 'SelShuffl'  # TODO: add indeed fast modules
     pipe_params['boosting']     = 'lgbm'
 
     return pipe_params
