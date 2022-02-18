@@ -239,14 +239,14 @@ modules_dict =  {
     'WoE':         WoE_module,
     'OneHot':      OneHot_module,
     
-    # missings
+    # Missings
     'MedImp':      MedImp_module,
     'MeanImp':     MeanImp_module, 
     'RandomImp':   RandomImp_module,
     'KNNImp':      KNNImp_module, 
     'IterImp':     IterImp_module, 
         
-    # reducers
+    # Dimension Reducers
     'PCA':         PCA_module,
     'kPCA':        kPCA_module,
     'Isomap':      Isomap_module,
@@ -277,14 +277,14 @@ modules_dict =  {
     'SMOTE':       SMOTE_module,  
     'ADASYN':      ADASYN_module,
     
-    # feature selection
+    # Feature selection
     'SeqFeatSel':  SeqFeatSel_module,
     'RecFeatAdd':  RecFeatAdd_module,
     'SmartSel':    SmartSel_module,
     'SelShuffl' :   SelShuffl_module,
     'SinglePerf' : SinglePerf_module,
     
-    # classifiers
+    # Classifiers
     # 'xgb':        xgb_mdl
     'lgbm' : lgbm_mdl
 }
@@ -309,6 +309,21 @@ def get_params(trial, modules):
 
     params = {}
 
+    # Missings
+    #MeanImp, MedImp, RandomImp do not need hyperparameters
+    if "KNNImp" in modules:
+        params.update({
+            'missing_vals_KNNImp__n_neighbours'        : trial.suggest_int('missing_vals_KNNImp__n_neighbours', low=1, high=10, step=2),  # check later  
+            'missing_vals_KNNImp__weights'             : trial.suggest_categorical('missing_vals_KNNImp__weights', ["uniform", "distance"])
+        })
+    if "IterImp" in modules:
+        params.update({
+            'missing_vals_IterImp__n_neighbours'       : trial.suggest_int('missing_vals_IterImp__n_neighbours', low=5, high=30, step=5),  # check later
+            'missing_vals_IterImp__n_nearest_features' : trial.suggest_uniform('missing_vals_IterImp__n_nearest_features', 1, 5),
+            'missing_vals_IterImp__tol'                : trial.suggest_categorical('missing_vals_IterImp__tol', [10**(-3), 10**(-2), 5*10**(-2), 10**(-1)]),
+        })
+
+    # Dimension Reducers
     if "PCA" in modules:
         params.update({
             'feat_eng_PCA__n_components'    : trial.suggest_int('feat_eng_PCA__n_components', 2, 11),
@@ -336,19 +351,20 @@ def get_params(trial, modules):
         'feat_eng_UMAP__min_dist'           :   trial.suggest_uniform('feat_eng_UMAP__min_dist', .05, 1),
         })
 
+    # Feature selection
     if "SeqFeatSel" in modules:
         params.update({
-          "feat_sel_SeqFeatSel__estimator"    : trial.suggest_categorical("feat_sel_SeqFeatSel__estimator", [lgbm_mdl, logreg_mdl]),
-          "feat_sel_SeqFeatSel__k_features"   : trial.suggest_int("feat_sel_SeqFeatSel__k_features", 3, 10),  # нужна классовая архитектура
-        #   "feat_sel_SeqFeatSel__forward"      : trial.suggest_categorical("feat_sel_SeqFeatSel__forward", [True, False]),
-          "feat_sel_SeqFeatSel__floating"     : trial.suggest_categorical("feat_sel_SeqFeatSel__floating",[True, False])
+          "feat_sel_SeqFeatSel__estimator"       : trial.suggest_categorical("feat_sel_SeqFeatSel__estimator", [lgbm_mdl, logreg_mdl]),
+          "feat_sel_SeqFeatSel__k_features"      : trial.suggest_int("feat_sel_SeqFeatSel__k_features", 3, 10),  # нужна классовая архитектура
+        #   "feat_sel_SeqFeatSel__forward"         : trial.suggest_categorical("feat_sel_SeqFeatSel__forward", [True, False]),
+          "feat_sel_SeqFeatSel__floating"        : trial.suggest_categorical("feat_sel_SeqFeatSel__floating",[True, False])
         }) 
 
     if "SmartSel" in modules:
         params.update({
-          "feat_sel_SmartSel__method"           : trial.suggest_categorical("feat_sel_SmartSel__method", ["pearson", "spearman"]),
-          "feat_sel_SmartSel__threshold"        : trial.suggest_float("feat_sel_SmartSel__threshold", 0, 1),
-          "feat_sel_SmartSel__selection_method" : trial.suggest_categorical("feat_sel_SmartSel__selection_method", ["missing_values", "cardinality", "variance"])  # что значит cardinality
+          "feat_sel_SmartSel__method"            : trial.suggest_categorical("feat_sel_SmartSel__method", ["pearson", "spearman"]),
+          "feat_sel_SmartSel__threshold"         : trial.suggest_float("feat_sel_SmartSel__threshold", 0, 1),
+          "feat_sel_SmartSel__selection_method"  : trial.suggest_categorical("feat_sel_SmartSel__selection_method", ["missing_values", "cardinality", "variance"])  # что значит cardinality
         }) 
 
     if "SelShuffl" in modules:
@@ -359,23 +375,24 @@ def get_params(trial, modules):
 
     if "RecFeatAdd" in modules:
         params.update({
-            "feat_sel_RecFeatAdd__estimator"      : trial.suggest_categorical("feat_sel_RecFeatAdd__estimator", [logreg_mdl, lgbm_mdl]),
-            "feat_sel_RecFeatAdd__threshold"      : trial.suggest_float("feat_sel_RecFeatAdd__threshold", 0, 1)
+            "feat_sel_RecFeatAdd__estimator"     : trial.suggest_categorical("feat_sel_RecFeatAdd__estimator", [logreg_mdl, lgbm_mdl]),
+            "feat_sel_RecFeatAdd__threshold"     : trial.suggest_float("feat_sel_RecFeatAdd__threshold", 0, 1)
         })
 
     if "SinglePerf" in modules:
         params.update({
-            "feat_sel_SinglePerf__estimator"      : trial.suggest_categorical("feat_sel_SinglePerf__estimator", [logreg_mdl, lgbm_mdl]),
-            "feat_sel_SinglePerf__threshold"      : trial.suggest_float("feat_sel_SinglePerf__threshold", 0.5, 1)
+            "feat_sel_SinglePerf__estimator"     : trial.suggest_categorical("feat_sel_SinglePerf__estimator", [logreg_mdl, lgbm_mdl]),
+            "feat_sel_SinglePerf__threshold"     : trial.suggest_float("feat_sel_SinglePerf__threshold", 0.5, 1)
         }) 
 
+    # Classifiers
     if "lgbm" in modules:
         params.update({
-        'boosting_lgbm__learning_rate':            trial.suggest_uniform('boosting_lgbm__learning_rate', .05, .31),
-        'boosting_lgbm__num_leaves':               trial.suggest_int('boosting_lgbm__num_leaves', 5, 32),
-        'boosting_lgbm__reg_alpha':                trial.suggest_uniform('boosting_lgbm__reg_alpha', 0, 16),
-        'boosting_lgbm__reg_lambda':               trial.suggest_uniform('boosting_lgbm__reg_lambda', 0, 16),
-        'boosting_lgbm__n_estimators':             100
+        'boosting_lgbm__learning_rate'           : trial.suggest_uniform('boosting_lgbm__learning_rate', .05, .31),
+        'boosting_lgbm__num_leaves'              : trial.suggest_int('boosting_lgbm__num_leaves', 5, 32),
+        'boosting_lgbm__reg_alpha'               : trial.suggest_uniform('boosting_lgbm__reg_alpha', 0, 16),
+        'boosting_lgbm__reg_lambda'              : trial.suggest_uniform('boosting_lgbm__reg_lambda', 0, 16),
+        'boosting_lgbm__n_estimators'            : 100
         })
 
     # if "xgb" in modules:
