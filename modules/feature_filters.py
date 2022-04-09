@@ -1,10 +1,25 @@
 import pandas as pd
 import numpy as np
 import modules.missing_values_module as mvm
-import modules.cliques_filter_module as cliques 
+# import modules.cliques_filter_module as cliques 
 
 
 class OutputCorrelationFilter():
+    """
+    Filters features based on correlation with target
+    
+    Attributes:
+    ----------
+    n_features: number of features to retain
+    share_features: share of features to retain
+    corr_metrics: method for correlation estimation (default: 'pearson')
+    max_acceptable_correlation: maximum corr value to accept
+    
+    Methods:
+    ----------
+    fit: fits transformer on data
+    transform: transforms given dataset
+    """
     
     def __init__(
                 self, n_features = False, 
@@ -45,9 +60,24 @@ class OutputCorrelationFilter():
         
         return X[self.desired_names]
 
-    
 
 class MutualCorrelationFilter():
+    """
+    Filters features based on correlation with target
+    
+    Attributes:
+    ----------
+    n_features: number of features to retain
+    share_features: share of features to retain
+    corr_metrics: method for correlation estimation (default: 'pearson')
+    max_acceptable_correlation: maximum corr value to accept
+    categorical_variables: list of categorical features
+    
+    Methods:
+    ----------
+    fit: fits transformer on data
+    transform: transforms given dataset
+    """
     
     def __init__(
                 self, n_features = False, 
@@ -108,7 +138,21 @@ class MutualCorrelationFilter():
         X_reunited = X_reunited.loc[:,~X_reunited.columns.duplicated()]
         return X_reunited
         
+        
 class VIFFilter():
+    """
+    Filters features based on VIF
+    
+    Attributes:
+    ----------
+    acceptable_vif: max VIF acceptable
+    desired_names: column names to retain
+    
+    Methods:
+    ----------
+    fit: fits transformer on data
+    transform: transforms given dataset
+    """
     
     def __init__(self, acceptable_vif = [5, 10]):
         
@@ -125,17 +169,33 @@ class VIFFilter():
         
         return X[self.desired_names]
     
-class CliquesFilter():
     
-    def __init__(self, trsh = 0.65):
-        self.trsh = 0.65
+# class CliquesFilter():
+#     """
+#     Filters features: maximum linearly independent subset of features by threshold
+    
+#     For additional information see [this notebook](https://notebooks.githubusercontent.com/view/ipynb?browser=chrome&color_mode=auto&commit=32ac73fafbdaf219ec8e6b5fb49a715dd54ceb1c&device=unknown&enc_url=68747470733a2f2f7261772e67697468756275736572636f6e74656e742e636f6d2f646d697472796f6b686f746e696b6f762f486162722f333261633733666166626461663231396563386536623566623439613731356464353463656231632f41727469636c655f6578706572696d656e74735f636f64652e6970796e62&logged_in=false&nwo=dmitryokhotnikov%2FHabr&path=Article_experiments_code.ipynb&platform=android&repository_id=428269178&repository_type=Repository&version=99}
+    
+#     Attributes:
+#     ----------
+#     acceptable_vif: max VIF acceptable
+#     desired_names: column names to retain
+    
+#     Methods:
+#     ----------
+#     fit: fits transformer on data
+#     transform: transforms given dataset
+#     """
+    
+#     def __init__(self, trsh = 0.65):
+#         self.trsh = 0.65
         
-    def fit(self, X, y):
-        qlq_list, G = cliques.get_noncollinear_fts(
-                                                    X, y, trsh=0.65, mode="all", verbose=False
-                                                    )
-        self.desired_names = qlq_list[list(qlq_list)[0]][0]
+#     def fit(self, X, y):
+#         qlq_list, G = cliques.get_noncollinear_fts(
+#                                                     X, y, trsh=0.65, mode="all", verbose=False
+#                                                     )
+#         self.desired_names = qlq_list[list(qlq_list)[0]][0]
         
-    def transform(self, X, y = None):
+#     def transform(self, X, y = None):
         
-        return X[self.desired_names]
+#         return X[self.desired_names]

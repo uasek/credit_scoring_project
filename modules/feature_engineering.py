@@ -4,10 +4,10 @@ import pandas as pd
 
 class ExampleModule:
     """
-    Ограничение по квантилям + логарифм / степень
+    Setting limits by quantiles + log + power
 
-
-    пример кода:
+    Example of usage:
+    -----------
     from sklearn.pipeline import Pipeline
 
     caler = ExampleModule(q_lower=0.1, q_upper=0.9)
@@ -26,15 +26,14 @@ class ExampleModule:
 
     def __init__(
         self,
-        q_lower=0.01,
-        q_upper=0.99,
-        log=False,
-        power=1
+        q_lower: float = 0.01,
+        q_upper: float = 0.99,
+        log: bool = False,
+        power: float = 1.0
         ):
         """
-        Запоминаем параметры
+        Store params
         """
-
         self.q_lower = q_lower
         self.q_upper = q_upper
         self.log = log
@@ -42,9 +41,8 @@ class ExampleModule:
 
     def fit(self, x, y=None):
         """
-        Считаем верхнюю и нижнюю границу из квантилей
+        Calculate lower and upper limits for quantiles
         """
-
         lower, upper = np.quantile(x, [self.q_lower, self.q_upper])
         self.lower = lower
         self.upper = upper
@@ -54,9 +52,8 @@ class ExampleModule:
 
     def transform(self, x, y=None):
         """
-        Ограничиваем признак и берем логарифм и (или) степень.
+        Set limits and take logarithm and/or power
         """
-
         result = np.clip(a=x, a_min=self.lower, a_max=self.upper)
         result = result ** self.power
 

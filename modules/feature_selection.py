@@ -3,12 +3,12 @@ from feature_engine.creation import CombineWithReferenceFeature
 
 class CombineWithReferenceFeature_adj():
     '''
-    Обертка вокруг CombineWithReferenceFeature()
-    Позволяет не устанавливать параметры
+    Wrapper for CombineWithReferenceFeature()
+    Let's not to set parameters:
     + variables_to_combine
     + reference_variables
-    заранее (иначе не будет работать с OneHotEncoder
-    и прочими преобразователями данных, а делать это при .fit()
+    beforehand (otherwise won't work with OneHotEncoder and other transformers.
+    Parameters are set at .fit()
     '''
     def __init__(self, operations):
         self.operations = operations

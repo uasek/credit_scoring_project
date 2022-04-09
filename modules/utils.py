@@ -1,11 +1,19 @@
-from sklearn.metrics import roc_auc_score
+import sklearn
+import imblearn
 
 
-def filter_params(params, pipe):
+def filter_params(params: dict, pipe: imbearn.pipeline.Pipeline):
     '''
     From all input parameters filter only
     those that are relevant for the current
     pipeline
+    
+    Parameters:
+    ----------
+    params: dict of parameters with values obtained from 
+        hyperparameter optimization (hyperopt or optuna)
+    pipe: sklearn.pipeline.Pipeline or imblearn.pipeline.Pipeline
+        current Pipeline model based on sklearn implementation
     '''
     pipe_steps = list(pipe.named_steps.keys())
     params_keys = list(params.keys())
@@ -39,9 +47,15 @@ def filter_params(params, pipe):
 # filter_params(params, pipe)
 
 
-def construct_pipe(steps_dict, modules):
+def construct_pipe(steps_dict: dict, 
+                   modules: dict) -> list:
     '''
     Construct a pipeline given structure
+    
+    Parameters:
+    ----------
+    steps_dict: dictionary  like {'feature_transform_stage': 'WoE'}
+    modules: dictionary like {'module_name': class}
     '''
     return [(steps_dict[s], modules[steps_dict[s]]) for s in steps_dict if steps_dict[s] != 'skip']
 
@@ -49,7 +63,16 @@ def construct_pipe(steps_dict, modules):
 # construct_pipe({'cat_encoding': 'onehot', 'feat_eng': 'kPCA'}, modules)
 
 
-def gini_score(y, y_pred):
-    res = roc_auc_score(y, y_pred) * 2 - 1
+def gini_score(y: pd.Series, y_pred: pd.Series) -> float:
+    """
+    Calculates Gini index based on ROC AUC:
+    Gini = AUC * 2 - 1
+    
+    Parameters:
+    ----------
+    y: true values of target (0 or 1)
+    y: predicted vales of target (from .predict_proba)
+    """
+    res = sklearn.metrics.roc_auc_score(y, y_pred) * 2 - 1
     print(f"Gini: {res}")
     return(res)

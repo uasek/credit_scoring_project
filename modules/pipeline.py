@@ -6,6 +6,7 @@ from functools import partial
 import numpy as np
 import pandas as pd
 import warnings
+import collections
 from collections import OrderedDict
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc
@@ -17,13 +18,83 @@ from hyperopt import fmin, tpe, STATUS_OK, STATUS_FAIL, Trials
 
 
 class PipeHPOpt(object):
-
+    """
+    Pipeline with hyperparameter optimization with reliance
+    on hyperopt. Provides flexibility to add custom modules
+    and change pipeline structure.
+    
+    Attributes:
+    ----------
+    modules: Python dictionary of modules for the pipeline
+        All modules that will be used for training in .train(space).
+        Keys should be consistent with what .train(space).
+        Since Pipeline() relies on sklearn.pipeline.Pipeline and
+        imblearn.pipeline.Pipeline, it is required that all modules
+        except the last one have .fit() and .transform() methods.
+        They can also have .fit_resample() needed for imblearn.
+        The last module (classifier ir regressor) should have
+        .fit() and .predict() / .predict_proba() methods.
+    mode: validation mode: 'kfold' (k-fold cross-validation) 
+        or 'valid' (train/test division based on sklearn). 
+    n_folds: number of folds in cross-validation (default: 5)
+        Applies only if mode = 'kfold'
+    test_size: percentage of observations in test sample 
+        (default: .33). Applies only if mode = 'valid'
+    seed: random seed (default: 42)
+    result: result obtained from hyperopt optimization (.train())
+    trials: logs obtained from hyperopt optimization (.train())
+    best_params: best pipeline parameters obtained from hyperopt optimization
+    best_model: best pipeline instance obtained from hyperopt optimization
+    _last_space: space that was trained for the last time.
+        Stored to retain pipeline order
+    
+    Methods:
+    ----------
+    train: finds optimal pipeline structure and hyperparameters,
+        returns optimal trained model, its parameters + hyperopt logs
+    plot_convergence: plots loss values over optimization epochs
+    plot_roc: plots ROC/Gain curve for classifier
+    
+    (Private) methods:
+    ----------
+    _get_minibatch_size: estimates n of obs. is train/test minibatches
+    _pipe: creates pipeline and estimates its loss on test / kfold cross-val
+    _train_reg_valid: estimates model loss on test samples
+    _train_reg_kfold: estimates model loss on cross-val samples
+    _get_ordered_steps: since hyperopt shuffles elements of FrozenDicts,
+        this method reorders them
+    _get_best_params: obtains best model parameters based on hyperopt logs
+    _get_best_model: constructs pipeline with best params, trains and returns it
+    """
+    
     def __init__(self,
-                 modules, 
-                 mode='kfold', 
-                 n_folds = 5, 
-                 test_size=.33, 
-                 seed=42):
+                 modules: dict, 
+                 mode: str = 'kfold', 
+                 n_folds: int = 5, 
+                 test_size: float = .33, 
+                 seed: int = 42) -> None:
+        """
+        Pipeline parameters stored in self
+        
+        Parameters
+        ----------
+        modules: Python dictionary of modules for the pipeline
+            All modules that will be used for training in .train(space).
+            Keys should be consistent with what .train(space).
+            Since Pipeline() relies on sklearn.pipeline.Pipeline and
+            imblearn.pipeline.Pipeline, it is required that all modules
+            except the last one have .fit() and .transform() methods.
+            They can also have .fit_resample() needed for imblearn.
+            The last module (classifier ir regressor) should have
+            .fit() and .predict() / .predict_proba() methods.
+        mode: validation mode: 'kfold' (k-fold cross-validation) 
+            or 'valid' (train/test division based on sklearn). 
+        n_folds: number of folds in cross-validation (default: 5)
+            Applies only if mode = 'kfold'
+        test_size: percentage of observations in test sample 
+            (default: .33). Applies only if mode = 'valid'
+        seed: random seed (default: 42)
+        """
         
         if (mode != 'kfold') & (mode != 'valid'):
             raise ValueError("Choose mode 'kfold' or 'valid'")
@@ -32,19 +103,47 @@ class PipeHPOpt(object):
         if (mode == 'kfold') & (test_size != .33):
             warnings.warn("Non-default test_size won't be used since mode == kfold!")
     
-        self.mode    = mode
+        self.mode = mode
         self.n_folds = n_folds
         self.test_size = test_size
-        self.seed    = seed
+        self.seed = seed
         self.modules = modules 
 
-    def _get_minibatch_size(self, total_obs, n, frac, tp, mode, n_folds, test_size, verbose=True):
+        
+    def _get_minibatch_size(self, 
+                            total_obs: int, 
+                            n: int, 
+                            frac: float, 
+                            tp: str, 
+                            mode: str, 
+                            n_folds: int, 
+                            test_size: float, 
+                            verbose: bool = True) -> int:
+        """
+        Calculates minibatch size to boost training speed
+        of pipelines
+        
+        Parameters
+        ----------
+        total_obs: total number of observations in df
+        n: number of observations to add to each batch
+        frac: is applied if n is not None, proportion of the initial 
+            dataset to add to each batch
+        tp: sample type ('train' or 'test')
+        mode: type of validation - k-Fold cross-validation ('kfold')
+            or standard train/test validation ('valid')
+        n_folds: is applied if mode = 'kfold'. Number of folds
+            in cross-validation
+        test_size: is applied if mode = 'valid'. Size of the test
+            / validation sample
+        verbose: boolean for minibatch to be printed
+        """
+        
+        if frac is None:
+            n = int(np.ceil(total_obs * frac))
         if n > total_obs:
             n = total_obs
-        if frac is not None:
-            n = int(np.ceil(total_obs * frac))
         if mode == 'valid':
-            # calculate n
             if tp == 'train':
                 n = int(np.ceil(n * (1 - test_size)))
             if tp == 'test':
@@ -59,7 +158,37 @@ class PipeHPOpt(object):
         return n
             
         
-    def train(self, X, y, space, trials, algo, max_evals, minibatch=True, n=1000, frac=None, verbose=False):
+    def train(
+        self, 
+        X: pd.DataFrame, 
+        y: pd.DataFrame, 
+        space: collections.OrderedDict, 
+        trials: hyperopt.Trials, 
+        algo: str, 
+        max_evals: int, 
+        minibatch: bool = True,
+        n: int = 1000,
+        frac: float = None,
+        verbose: bool = False) -> (imblearn.pipeline.Pipeline, dict, hyperopt.Trials):
+        """
+        Runs hyperopt on the input data and returns optimal pipeline structure
+        
+        Parameters:
+        ----------
+        X: input train pandas dataframe
+        y: input train pandas series with target
+        space: ordered dictionary of pipeline structure, each element
+            is an array of modules passed to hyperopt choice
+        trials: hyperopt structure to store logs
+        algo: hyperparameter optimization algorithm passed to hyperopt
+        max_evals: maximum number of iterations passed to hyperopt 
+        minibatch: bool if minibatch calculation to be used
+        n: is applied if minibatch = True. Number of obs. in minibatch 
+        frac: is applied if minibatch = True and n is None. 
+            % of observation to be passed to minibatch
+        verbose: bool if logs to be printed
+        """
+        
         self._last_space = space
         
         # minibatch size for train & test
@@ -92,7 +221,35 @@ class PipeHPOpt(object):
         self.best_model = self._get_best_model(X, y)
         return self.best_model, self.best_params, trials
 
-    def _pipe(self, para, x_train=None, x_test=None, y_train=None, y_test=None, X=None, y=None, _k_idx=None, n_train=None, n_test=None):
+    
+    def _pipe(self, 
+              para, 
+              x_train: pd.DataFrame = None, 
+              x_test: pd.Series = None, 
+              y_train: pd.DataFrame =None, 
+              y_test: pd.Series = None, 
+              X: pd.DataFrame = None, 
+              y: pd.Series = None, 
+              _k_idx = list, 
+              n_train: int = None, 
+              n_test: int = None) -> dict:
+        """
+        Creates and trains pipeline, returns loss + logs
+        
+        Parameters:
+        ----------
+        para: input parameters from hyperopt to construct pipeline 
+        x_train: train sample, applied if self.mode = 'valid'
+        y_train: test sample, applied if self.mode = 'valid'
+        y_train: train series with targets, applied if self.mode = 'valid'
+        y_test: test series with targets, applied if self.mode = 'valid'
+        X: train + valid sample, applied if self.mode = 'kfold'
+        y: train + valid targets, applied if self.mode = 'kfold'
+        _k_idx: indices for cross-validation
+        n_train: no. of obervations in train to sample for minibatch training
+        n_test: no. of obervations in test to sample for minibatch training
+        """
+        
         pipe_steps = self._get_ordered_steps(para)
         # print(pipe_steps)
         reg = Pipeline(pipe_steps)
@@ -108,7 +265,31 @@ class PipeHPOpt(object):
         elif self.mode == 'valid':
             return self._train_reg_valid(reg, para, x_train, x_test, y_train, y_test, n_train, n_test)
         
-    def _train_reg_valid(self, reg, para, x_train, x_test, y_train, y_test, n_train=None, n_test=None):
+        
+    def _train_reg_valid(self, 
+                         reg, 
+                         para: dict, 
+                         x_train: pd.DataFrame, 
+                         x_test: pd.Series, 
+                         y_train: pd.DataFrame, 
+                         y_test: pd.Series, 
+                         n_train: int = None, 
+                         n_test: int = None) -> dict:
+        """
+        Trains model on train/valid samples
+        
+        Parameters:
+        -----------
+        reg: constructed pipeline
+        para: parameters of the pipeline to log
+        x_train: train sample, applied if self.mode = 'valid'
+        y_train: test sample, applied if self.mode = 'valid'
+        y_train: train series with targets, applied if self.mode = 'valid'
+        y_test: test series with targets, applied if self.mode = 'valid'
+        n_train: no. of obervations in train to sample for minibatch training
+        n_test: no. of obervations in test to sample for minibatch training
+        """
+        
         x_train = x_train.sample(n_train)
         x_test  = x_test.sample(n_test)
         y_train = y_train[x_train.index]
@@ -119,7 +300,29 @@ class PipeHPOpt(object):
         loss = para['loss_func'](y_test, pred)
         return {'loss': loss, 'model': reg, 'params': para, 'status': STATUS_OK}
     
-    def _train_reg_kfold(self, reg, para, X, y, _k_idx, n_train=None, n_test=None):
+    
+    def _train_reg_kfold(self, 
+                         reg, 
+                         para: dict, 
+                         X: pd.DataFrame, 
+                         y: pd.Series, 
+                         _k_idx: list, 
+                         n_train: int = None, 
+                         n_test: int = None) -> dict:
+        """
+        Trains model on k-fold cross-validation samples
+        
+        Parameters:
+        -----------
+        reg: constructed pipeline
+        para: parameters of the pipeline to log
+        X: train + valid sample, applied if self.mode = 'kfold'
+        y: train + valid targets, applied if self.mode = 'kfold'
+        _k_idx: indices for cross-validation
+        n_train: no. of obervations in train to sample for minibatch training
+        n_test: no. of obervations in test to sample for minibatch training
+        """
+        
         losses = []
         for train_index, test_index in _k_idx:
             X_split_train, X_split_test = X.iloc[train_index, :], X.iloc[test_index, :]
@@ -136,14 +339,36 @@ class PipeHPOpt(object):
             losses.append(loss)
         return {'loss': np.mean(losses), 'params': para, 'status': STATUS_OK}
     
-    def _get_ordered_steps(self, para):
-        # hp shuffles parameters, even OrderedDict(). To overcome this we
-        # import order from the input OrderedDict()
+    
+    def _get_ordered_steps(self, para: dict) -> list:
+        """
+        HyperOpt shuffles parameters, even OrderedDict(). To overcome this,
+        we import order from the input OrderedDict()
+        
+        Parameters:
+        ----------
+        para: unordered list of parameters from hyperopt to order
+        
+        (implied):
+        self._last_space: OrderedDict of parameters to draw correct order from
+        """
         correct_order = list(self._last_space['pipe_params'].keys())
         hp_modules = para['pipe_params']
         return [(hp_modules[i], self.modules[hp_modules[i]]) for i in correct_order if hp_modules[i] != 'skip']
     
-    def _get_best_params(self):
+    
+    def _get_best_params(self) -> dict:
+        """
+        hyperopt returns trials object of optimization. Hereby
+        we find the optimal parameters
+        
+        Parameters:
+        ----------
+        
+        (implied):
+        self.trials: logged results from hyperopt fmin optimization
+        self._last_space: OrderedDict of parameters to draw correct order from
+        """
         best_params = self.trials.results[np.argmin([r['loss'] for r in self.trials.results])]['params']
         pipe_params_adj = OrderedDict()
         for i in list(self._last_space['pipe_params'].keys()):
@@ -151,7 +376,17 @@ class PipeHPOpt(object):
         best_params['pipe_params'] = pipe_params_adj
         return best_params
     
-    def _get_best_model(self, X, y):
+    
+    def _get_best_model(self, X: pd.DataFrame, y: pd.Series) -> sklearn.pipeline.Pipeline:
+        """
+        hyperopt returns trials object of optimization. Hereby
+        we train and return the model with the optimal parameters
+        
+        Parameters:
+        -----------
+        X: training dataset
+        y: training targets
+        """
         para = self._get_best_params()
         pipe_steps = self._get_ordered_steps(para)
         reg = Pipeline(pipe_steps)
@@ -169,8 +404,17 @@ class PipeHPOpt(object):
         reg.fit(X, y)
         return reg
         
-    def plot_convergence(self, path=None, lw=2):
-        plt.plot(np.array([r['loss'] for r in self.trials.results]))
+        
+    def plot_convergence(self, path: str = None, lw: float = 2) -> None:
+        """
+        Plots loss values dynamics by epoch from hyperopt.trials
+        
+        Parameters:
+        ----------
+        path: path to save the figure
+        lw: linewidth passed to matplotlib
+        """
+        plt.plot(np.array([r['loss'] for r in self.trials.results]), lw=lw)
         plt.title('Hyperopt: loss function dynamics')
         plt.xlabel('Epoch')
         if self.mode == 'kfold':
@@ -181,10 +425,32 @@ class PipeHPOpt(object):
         if path is not None:
             plt.savefig(path)
             
-    def plot_roc(self, X_train, y_train, X_test, y_test, mdl=None, path=None, lw=2):
-        # 2 modes are supported:
-        # > mode="roc" — builds ROC curve
-        # > mode="gain" — builds Gain curve
+            
+    def plot_roc(self, 
+                 X_train: pd.DataFrame,
+                 y_train: pd.Series,
+                 X_test: pd.DataFrame,
+                 y_test: pd.Series,
+                 mdl = None, 
+                 path: str = None, 
+                 lw: float = 2) -> None:
+        """
+        Plots ROC/Gain curves for ranking quality assessment
+        
+        2 modes are supported:
+        * mode="roc" — builds ROC curve
+        * mode="gain" — builds Gain curve
+        
+        Parameters:
+        ----------
+        X_train: features for train
+        y_train: target for train
+        X_test: features for test
+        y_test: target for test
+        mdl: classifier class instance 
+        path: path to save the figure
+        lw: linewidth passed to matplotlib
+        """
         if mdl is None:
             mdl = self.get_best_model()
         y_train_pred = mdl.predict_proba(X_train)[:,1]
@@ -216,8 +482,10 @@ class PipeHPOpt(object):
     def plot_gain(self, X_train, y_train, X_test, y_test, mdl=None, path=None, lw=2):
         pass
         
+        
     def plot_lift(self, X_train, y_train, X_test, y_test, mdl=None, path=None, lw=2):
         pass
+        
         
     def plot_precision_recall(self, X_train, y_train, X_test, y_test, mdl=None, path=None, lw=2):
         pass
