@@ -43,7 +43,7 @@ from imblearn.over_sampling import ADASYN
 from imblearn.under_sampling import RandomUnderSampler
 
 # feature selection
-from modules.feature_selection import CombineWithReferenceFeature_adj
+from modules.feature_selection import CombineWithReferenceFeature_adj, SafeSelectByShuffling, SafeSelectBySingleFeaturePerformance
 from mlxtend.feature_selection import SequentialFeatureSelector
 from feature_engine.selection  import SelectByShuffling
 from feature_engine.selection  import RecursiveFeatureAddition
@@ -58,6 +58,7 @@ from lightgbm import LGBMClassifier
 from xgboost import XGBClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import LogisticRegression
 
 seed = 42
 
@@ -71,6 +72,8 @@ lgbm_mdl = LGBMClassifier(
     reg_lambda = 8,
     random_state = seed
 )
+
+logreg_mdl = LogisticRegression(penalty="none", max_iter=1000)
 
 
 # Encoders
@@ -178,16 +181,16 @@ CombWRef_module = CombineWithReferenceFeature_adj(operations = ['mul'])
 
 
 # Feature selection
-SeqFearSel_module = SequentialFeatureSelector(
+SeqFeatSel_module = SequentialFeatureSelector( # very slow but seems to work
     estimator  = lgbm_mdl,  
-    # k_features = 5,                                                  
+    # k_features = 5,                                             
     forward    = True,                                                  
     floating   = True,                                                
     verbose    = 0,
     cv         = 5
 )
 
-RecFeatAdd_module = RecursiveFeatureAddition(
+RecFeatAdd_module = RecursiveFeatureAddition( # rather slow
     lgbm_mdl,
     threshold = 0.005
 )
@@ -201,8 +204,20 @@ SmartSel_module = SmartCorrelatedSelection(
     cv=5
 )
 
+# params from SelectByShuffling + min_features
+SelShuffl_module = SafeSelectByShuffling(
+    variables=None,                   # If None, the transformer will shuffle all numerical variables in the dataset.
+    estimator=logreg_mdl,
+    scoring='roc_auc',
+    threshold=0.01,
+    cv=5
+)
 
-
+SinglePerf_module = SafeSelectBySingleFeaturePerformance(  # rather slow
+    estimator=logreg_mdl,
+    scoring="roc_auc",
+    threshold=None,               # will be automatically set to the mean performance value of all features
+)
 
 
 
@@ -257,10 +272,11 @@ def get_default_modules():
         'ADASYN':      ADASYN_module,
         
         # feature selection
-        'SeqFearSel':  SeqFearSel_module,
+        'SeqFeatSel':  SeqFeatSel_module,
         'RecFeatAdd':  RecFeatAdd_module,
         'SmartSel':    SmartSel_module,
-        # 'SelShuffl':   SelShuffl_module, 
+        'SelShuffl' :   SelShuffl_module,
+        'SinglePerf' : SinglePerf_module,
         
         # classifiers
         'lgbm':        lgbm_mdl
@@ -282,6 +298,19 @@ def get_set_params():
         # WoE does not need hyperparams
         # OneHotEncoder does not need hyperparams
         # RecFeatAdd might be redefined to receive a correct estimator
+
+        # Imbalances in target
+        # TODO: add correct parameter naming
+        # "imbalance_SMOTE__k_neighbors"       : hp.randint("imbalance_SMOTE__k_neighbors",  9) + 1,
+        # "imbalance_ADASYN__n_neighbors"      : hp.randint("imbalance_ADASYN__n_neighbors", 9) + 1,  # параметр одинаковый, в двух алгоритмах называется по-разному :))   
+        
+        #Missings
+        #MeanImp, MedImp, RandomImp do not need hyperparameters
+        'Missing__KNNImp_n_neighbours':      hp.quniform('Missing__KNNImp_n_neighbours', low=1, high=10, q=2),
+        'Missing__KNNImp_weights':      hp.choice('Missing__KNNImp_weights', ["uniform", "distance"]),
+        'Missing__IterImp_n_neighbours':      hp.quniform('Missing__IterImp_n_neighbours', low=5, high=30, q=5),
+        'Missing__IterImp_n_nearest_features':      hp.quniform('Missing__IterImp_n_nearest_features', low=1, high=5, q=1),
+        'Missing__IterImp_tol':      hp.choice('Missing__IterImp_n_tol', [10**(-3), 10**(-2), 5*10**(-2), 10**(-1)]),
         # PCA
         # 'DimRed__PCA__n_components':      hp.choice('PCA__n_components',      np.arange(2, 11)),
         'DimRed__PCA__n_components':      hp.quniform('DimRed__PCA__n_components', low=2, high=11, q=1),
@@ -307,6 +336,30 @@ def get_set_params():
         'DimRed__UMAP__n_neighbors':      hp.quniform('DimRed__UMAP__n_neighbors', low=2, high=11, q=1),
         'DimRed__UMAP__n_components':     hp.quniform('DimRed__UMAP__n_components', low=2, high=11, q=1),
         'DimRed__UMAP__min_dist':         hp.uniform('DimRed__UMAP__min_dist', low=.05, high=1),
+
+        # TODO: add correct parameter naming
+#        # SeqFeatSel
+#        "feat_sel_SeqFeatSel__estimator"    : hp.choice("feat_sel_SeqFeatSel__estimator", [lgbm_mdl, logreg_mdl]),
+#        "feat_sel_SeqFeatSel__k_features"   : hp.quniform("feat_sel_SeqFeatSel__k_features", 3, 10 + 1),  # поправка на +1 относительно оптуны
+#        # "feat_sel_SeqFeatSel__forward"      : hp.choice("feat_sel_SeqFeatSel__forward", [True, False]),
+#        "feat_sel_SeqFeatSel__floating"     : hp.choice("feat_sel_SeqFeatSel__floating",[True, False]),
+#
+#        # SmartSel
+#        "feat_sel_SmartSel__method"           : hp.choice("feat_sel_SmartSel__method", ["pearson", "spearman"]),
+#        "feat_sel_SmartSel__threshold"        : hp.uniform("feat_sel_SmartSel__threshold", 0, 1),
+#        "feat_sel_SmartSel__selection_method" : hp.choice("feat_sel_SmartSel__selection_method", ["missing_values", "cardinality", "variance"]),  # что значит cardinality
+#
+#        # SelShuffl
+#        "feat_sel_SelShuffl__estimator"      : hp.choice("feat_sel_SelShuffl__estimator", [logreg_mdl, lgbm_mdl]),
+#        "feat_sel_SelShuffl__threshold"      : hp.uniform("feat_sel_SelShuffl__threshold", 0, 0.1),
+#
+#        # RecFeatAdd
+#        "feat_sel_RecFeatAdd__estimator"      : hp.choice("feat_sel_RecFeatAdd__estimator", [logreg_mdl, lgbm_mdl]),
+#        "feat_sel_RecFeatAdd__threshold"      : hp.uniform("feat_sel_RecFeatAdd__threshold", 0, 1),
+#
+#        # SinglePerf
+#        "feat_sel_SinglePerf__estimator"      : hp.choice("feat_sel_SinglePerf__estimator", [logreg_mdl, lgbm_mdl]),
+#        "feat_sel_SinglePerf__threshold"      : hp.uniform("feat_sel_SinglePerf__threshold", 0.5, 1),
 
         # LightGBM
         # 'lgbm__learning_rate':            hp.choice('lgbm__learning_rate',    np.arange(0.05, 0.31, 0.05)),
