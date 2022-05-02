@@ -19,6 +19,7 @@ class WoEEncoder_adj(BaseCategoricalTransformer):
 
         self.variables = _check_input_parameter_variables(variables)
         self.ignore_format = ignore_format
+        self.errors = "ignore"  # hotfix for a problem that may arise
 
     def fit(self, X: pd.DataFrame, y: pd.Series):
         """
