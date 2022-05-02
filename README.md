@@ -1,3 +1,10 @@
+# About this branch
+
+- There are only 4 datasets in `/datasets` folder – that were used in my work. Some additional preprocessing has been done to them.
+- In `/modules` folder `optuna_instruments.py` file has been added with functions for experiments. Also, a small and backward compatible change in `encoders.py` has been made.
+- Notes with experiments are in `/m.y.baranov_diploma` folder. The code should
+work. If not, contact me 😉
+
 # Model Risk in Credit Scoring
 
 This repo is aimed at providing quantitative evidence how various stages of constructing a credit scoring model contribute to its performance.
