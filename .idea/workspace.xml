@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="f9bb02cf-eb44-43e5-8de6-90148ef16348" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/baseline/model_risk_mvp.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/baseline/model_risk_mvp.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/baseline/pipeline-demo.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/baseline/pipeline-demo.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/checks/Clustering.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/checks/Clustering.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/checks/Scaling.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/checks/Scaling.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/checks/imbalanced_data.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/checks/imbalanced_data.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/checks/missing_values.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/checks/missing_values.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/datasets/01_german/01_german.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/datasets/01_german/01_german.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/datasets/02_australian/02_australian.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/datasets/02_australian/02_australian.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/datasets/03_lending_club/03_lending_club.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/datasets/03_lending_club/03_lending_club.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/datasets/05_defaults_cc/05_defaults_cc.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/datasets/05_defaults_cc/05_defaults_cc.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/datasets/06_give_me_some_credit/06_give_me_some_credit.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/datasets/06_give_me_some_credit/06_give_me_some_credit.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/datasets/07_pakdd/07_pakdd.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/datasets/07_pakdd/07_pakdd.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/datasets/09_Thomas/09_Thomas.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/datasets/09_Thomas/09_Thomas.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/datasets/10_polish/10_polish.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/datasets/10_polish/10_polish.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/datasets/11_AER/11_AER.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/datasets/11_AER/11_AER.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/datasets/12_Prosper/Prosper.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/datasets/12_Prosper/Prosper.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/datasets/14_Petrochelli/14_Petrochelli.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/datasets/14_Petrochelli/14_Petrochelli.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/datasets/19_RussianBanks/19_RussianBanks.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/datasets/19_RussianBanks/19_RussianBanks.ipynb" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="RESET_MODE" value="HARD" />
+    <option name="UPDATE_TYPE" value="REBASE" />
+  </component>
+  <component name="ProjectId" id="20CPcVscFZt9CCp2nEBhjKw1vwV" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="f9bb02cf-eb44-43e5-8de6-90148ef16348" name="Changes" comment="" />
+      <created>1635545679161</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1635545679161</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="CUSTOM_BOOLEAN_PROPERTIES">
+                <map>
+                  <entry key="Show.Git.Branches" value="false" />
+                </map>
+              </option>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="origin/main" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+              <option name="COLUMN_ID_WIDTH">
+                <map>
+                  <entry key="Table.Default.Author.ColumnIdWidth" value="63" />
+                  <entry key="Table.Default.Date.ColumnIdWidth" value="48" />
+                  <entry key="Table.Space.CommitStatus.ColumnIdWidth" value="47" />
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="RECENT_FILTERS">
+      <map>
+        <entry key="Branch">
+          <value>
+            <list>
+              <RecentGroup>
+                <option name="FILTER_VALUES">
+                  <option value="HEAD" />
+                </option>
+              </RecentGroup>
+            </list>
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="oldMeFiltersMigrated" value="true" />
+  </component>
+</project>

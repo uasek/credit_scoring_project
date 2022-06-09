@@ -24,9 +24,7 @@ class DimensionReducer():
     def transform(self, X):
         # potentially 
         Z = self.reducer.transform(X)
-        return pd.concat([X, pd.DataFrame(Z, 
-                                          index = X.index,
-                                          columns = [f'{self.affx}_{i}' for i in range(Z.shape[1])])], axis=1)
+        return Z
     
     def set_params(self, **kwargs):
         self.reducer.set_params(**kwargs)
